@@ -8,7 +8,7 @@ AVN Correlator Unit and Acceptance Testing based Framework
 
 Install dependencies to the system, by following their installation instructions:
 
-* [_katcp-python_](https://github.com/ska-sa/katcp-python) [optional]
+* [_katcp-python_](https://github.com/ska-sa/katcp-python)
 * [_nosekatreport_](https://github.com/ska-sa/nosekatreport/tree/karoocbf)
 
 ### Python testing dependencies packages
