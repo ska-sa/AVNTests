@@ -13,29 +13,42 @@ import struct
 import socket
 
 from nosekatreport import Aqf
-
 from nose.plugins.attrib import attr
-
-# LOGGER = logging.getLogger(__name__)
-LOGGER = logging.getLogger('avn_tests')
-
+from functools import wraps
 from dotenv import load_dotenv
 from dotenv import find_dotenv
 
-
+LOGGER = logging.getLogger(__name__)
 load_dotenv(find_dotenv())
 
-class Credentials:
-    msg = "Check and ensure that your $(pwd)/.env file exists."
-    username = str(os.getenv("USERNAME"))
-    assert username, msg
-    password = str(os.getenv("PASSWORD"))
-    assert password, msg
-    hostip = str(os.getenv("HOSTIP"))
-    assert hostip, msg
-    katcpip = str(os.getenv("KATCPIP"))
-    assert katcpip, msg
 
+class Credentials:
+    _msg = "Check and ensure that your $(pwd)/.env file exists."
+    username = str(os.getenv("USERNAME"))
+    assert username, _msg
+    password = str(os.getenv("PASSWORD"))
+    assert password, _msg
+    hostip = str(os.getenv("HOSTIP"))
+    assert hostip, _msg
+    katcpip = str(os.getenv("KATCPIP"))
+    assert katcpip, _msg
+
+
+def retry(func, count=3, wait_time=300):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        retExc = None
+        for i in xrange(count):
+            while True:
+                try:
+                    return func(*args, **kwargs)
+                except Exception as exc:
+                    retExc = exc
+                    time.sleep(wait_time)
+                    continue
+                break
+        raise retExc
+    return wrapper
 
 def ip2int(ipstr): return struct.unpack('!I', socket.inet_aton(ipstr))[0]
 
@@ -248,8 +261,8 @@ def channel_center_freqs(self):
     n_chans = float(self.n_chans)
     bandwidth = float(self.bandwidth)
     ch_bandwidth = bandwidth / n_chans
-    f_start = 0.  # Center freq of the first channel
-    return f_start + np.arange(n_chans) * ch_bandwidth
+    f_start = (2 * bandwidth) - ch_bandwidth  # Center freq of the first channel
+    return f_start - np.arange(n_chans) * ch_bandwidth
 
 
 def calc_freq_samples(self, chan, samples_per_chan, chans_around=0):
@@ -286,5 +299,5 @@ def calc_freq_samples(self, chan, samples_per_chan, chans_around=0):
     start_freq = channel_center_freqs(self)[start_chan] - ch_bandwidth / 2
     end_freq = channel_center_freqs(self)[end_chan] + ch_bandwidth / 2
     sample_spacing = ch_bandwidth / (samples_per_chan - 1)
-    num_samples = int(np.round((end_freq - start_freq) / sample_spacing)) + 1
+    num_samples = abs(int(np.round((end_freq - start_freq) / sample_spacing))) + 1
     return np.linspace(start_freq, end_freq, num_samples)

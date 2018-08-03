@@ -58,8 +58,7 @@ class test_AVN(unittest.TestCase):
 
     def setUp(self):
         Aqf.step('Configuring HDF5 receiver.')
-        self.avnControl = AVN_Rx(katcp_ip=Credentials.katcpip, username=Credentials.username,
-            password=Credentials.password)
+        self.avnControl = AVN_Rx()
         super(test_AVN, self).setUp()
         try:
             Aqf.step('Setting up Signal Generator.')
@@ -72,7 +71,8 @@ class test_AVN(unittest.TestCase):
 
         try:
             self.errmsg = None
-            self.bandwidth = float(self.avnControl.sensor_request('roachFrequencyFs')[-1])
+            # 2nd Nyquist Zone
+            self.bandwidth = float(self.avnControl.sensor_request('roachFrequencyFs')[-1]) / 2
             self.n_chans = int(self.avnControl.sensor_request("roachNumFrequencyChannels")[-1])
             #Fs = 800e6 # Hz
             # Wideband
@@ -100,9 +100,9 @@ class test_AVN(unittest.TestCase):
             self.addCleanup(self.signalGen.close)
             return True
 
-    @aqf_vr('CBF.V.3.30')
-    @aqf_requirements("CBF-REQ-0126", "CBF-REQ-0047", "CBF-REQ-0046", "CBF-REQ-0043",
-                      "CBF-REQ-0053")
+    # @aqf_vr('CBF.V.3.30')
+    # @aqf_requirements("CBF-REQ-0126", "CBF-REQ-0047", "CBF-REQ-0046", "CBF-REQ-0043",
+    #                   "CBF-REQ-0053")
     def test_channelisation(self):
         #        Aqf.procedure(TestProcedure.Channelisation)
         try:
@@ -114,15 +114,13 @@ class test_AVN(unittest.TestCase):
                     _mode = "Wideband"
                 else:
                     _mode = "NarrowBand"
-
-                # test_chan = 511 #random.choice(range(self.n_chans)[:self.n_chans])
                 test_heading("CBF.AVN Channelisation {} Coarse L-band".format(_mode))
                 self._test_channelisation()
             else:
                 Aqf.failed(self.errmsg)
 
-    @aqf_vr('CBF.V.4.7')
-    @aqf_requirements("CBF-REQ-0096")
+    # @aqf_vr('CBF.V.4.7')
+    # @aqf_requirements("CBF-REQ-0096")
     def test_accumulation_length(self):
         # The CBF shall set the Baseline Correlation Products accumulation interval to a fixed time
         # in the range $$500 +0 -20ms$$.
@@ -162,16 +160,14 @@ class test_AVN(unittest.TestCase):
 
     # def _test_channelisation(self, test_chan=212):
     def _test_channelisation(self, test_chan=212):
-        Aqf.step("Initialise a continuous data recording.")
-        self.avnControl.startCapture()
         req_chan_spacing = self.bandwidth / self.n_chans
         requested_test_freqs = calc_freq_samples(
-            self, test_chan, samples_per_chan=10, chans_around=2)
+            self, test_chan, samples_per_chan=101, chans_around=2)
         expected_fc = channel_center_freqs(self)[test_chan]
         # Get baseline 0 data, i.e. auto-corr of m000h
         test_baseline = 0
         # [CBF-REQ-0053]
-        min_bandwithd_req = 770e6
+        min_bandwithd_req = 350e6
         # [CBF-REQ-0126] CBF channel isolation
         cutoff = 53  # dB
         # Placeholder of actual frequencies that the signal generator produces
@@ -191,12 +187,14 @@ class test_AVN(unittest.TestCase):
             _set_pw = self.signalGen.setPower(cw_power)
             assert _set_pw == cw_power
             Aqf.passed("Signal Generator set successfully.")
+            self.avnControl.startCapture()
             time.sleep(1)
         except Exception as exc:
             LOGGER.error("Failed to set Signal Generator parameters")
             return False
 
         try:
+            Aqf.step("Initialise a continuous data recording.")
             Aqf.step('Capture an initial HDF5 accumulation and determine the number of frequency '
                      'channels in the dump.')
             initial_dump = self.avnControl.get_hdf5(stopCapture=True)

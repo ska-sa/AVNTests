@@ -16,27 +16,10 @@ import sys
 import time
 
 from avn_tests.utils import Credentials
+from avn_tests.utils import retry
 
 # import matplotlib.pyplot as plt
 # import pandas as pd
-
-
-def retry(func, count=3, wait_time=300):
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        retExc = None
-        for i in xrange(count):
-            while True:
-                try:
-                    return func(*args, **kwargs)
-                except Exception as exc:
-                    retExc = exc
-                    time.sleep(wait_time)
-                    continue
-                break
-        raise retExc
-    return wrapper
-
 
 class AllowAnythingPolicy(paramiko.MissingHostKeyPolicy):
     def missing_host_key(self, client, hostname, key):
@@ -60,6 +43,7 @@ class AVN_Rx(LoggingClass):
         self._username = Credentials.username
         self._password = Credentials.password
         self._setUp()
+        super(AVN_Rx, self).__init__()
 
     def _setUp(self):
         self._dir_remote = "/home/{}/Data/RoachAcquisition/".format(self._username)
@@ -203,9 +187,10 @@ class AVN_Rx(LoggingClass):
         """
         get local HDF5 file
         """
+        settling_time = 0.5
         if stopCapture:
             self.stopCapture()
-            time.sleep(1)
+            time.sleep(settling_time)
 
         try:
             epoch_time = time.time()
@@ -216,17 +201,19 @@ class AVN_Rx(LoggingClass):
             file_timestamp = latestfile.split('/')[-1].replace('.h5', '').replace("\\@ 0 0", '')
             pattern = "%Y-%m-%dT%H.%M.%S.%f"
             epoch_timestamp = int(time.mktime(time.strptime(file_timestamp, pattern)))
-            comp_timestamp = abs(epoch_time - epoch_timestamp)
-            print ("epoch_timestamp:{}, epoch_time:{}, comp_timestamp:{}".format(epoch_timestamp,
-                epoch_time, comp_timestamp))
-            if comp_timestamp <= 5:
+            comp_timestamp = abs(epoch_time - epoch_timestamp - settling_time)
+            self.logger.info(
+                "Data timestamps -> epoch_timestamp:{}, epoch_time:{}, comp_timestamp:{}".format(
+                    epoch_timestamp, epoch_time, comp_timestamp))
+            if comp_timestamp <= 10:
                 self.logger.debug("Extracting data from HDF5 ({})".format(latestfile))
                 with h5py.File(latestfile, 'r') as fin:
                     data = fin['Data'].values()
                     for element in data:
                         if element.name.find('VisData') > -1:
                             data_raw = np.array(element.value)
-                            # print ("Max Data: {}, Min Data: {}".format(np.max(data_raw), np.min(data_raw)))
+                            self.logger.info("Max Data: {}, Min Data: {}".format(
+                                np.max(data_raw), np.min(data_raw)))
                 self.logger.info("Backup the latest HDF5 ({}) file to {}".format(self._dir_remote,
                     self._dir_local_dump))
                 os.rename(latestfile, '/'.join([self._dir_local_dump, latestfile.split('/')[-1]]))
