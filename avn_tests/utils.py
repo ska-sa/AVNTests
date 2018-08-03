@@ -19,8 +19,22 @@ from nose.plugins.attrib import attr
 # LOGGER = logging.getLogger(__name__)
 LOGGER = logging.getLogger('avn_tests')
 
+from dotenv import load_dotenv
+from dotenv import find_dotenv
 
-# Define lambda functions to convert ip to int and back
+
+load_dotenv(find_dotenv())
+
+class Credentials:
+    msg = "Check and ensure that your $(pwd)/.env file exists."
+    username = str(os.getenv("USERNAME"))
+    assert username, msg
+    password = str(os.getenv("PASSWORD"))
+    assert password, msg
+    hostip = str(os.getenv("HOSTIP"))
+    assert hostip, msg
+    katcpip = str(os.getenv("KATCPIP"))
+    assert katcpip, msg
 
 
 def ip2int(ipstr): return struct.unpack('!I', socket.inet_aton(ipstr))[0]

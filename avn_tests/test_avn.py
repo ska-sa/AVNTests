@@ -30,6 +30,7 @@ from avn_tests.aqf_utils import test_heading
 
 from avn_tests.utils import calc_freq_samples
 from avn_tests.utils import channel_center_freqs
+from avn_tests.utils import Credentials
 from avn_tests.utils import complexise
 from avn_tests.utils import executed_by
 from avn_tests.utils import loggerise
@@ -47,36 +48,22 @@ from nosekatreport import system
 
 from descriptions import TestProcedure
 
-from dotenv import load_dotenv
-from dotenv import find_dotenv
-
 LOGGER = logging.getLogger(__file__)
 
-
-load_dotenv(find_dotenv())
 
 @cls_end_aqf
 @system('all')
 class test_AVN(unittest.TestCase):
     """ Unit-testing class for AVN tests"""
 
-    msg = "Check and ensure that your $(pwd)/.env file exists."
-    _USERNAME = str(os.getenv("USERNAME"))
-    assert _USERNAME, msg
-    _PASSWORD = str(os.getenv("PASSWORD"))
-    assert _PASSWORD, msg
-    _HOSTIP = str(os.getenv("HOSTIP"))
-    assert _HOSTIP, msg
-    _KATCPIP = str(os.getenv("KATCPIP"))
-    assert _KATCPIP, msg
-
     def setUp(self):
         Aqf.step('Configuring HDF5 receiver.')
-        self.avnControl = AVN_Rx(katcp_ip=self._KATCPIP, username=self._USERNAME, password=self._PASSWORD)
+        self.avnControl = AVN_Rx(katcp_ip=Credentials.katcpip, username=Credentials.username,
+            password=Credentials.password)
         super(test_AVN, self).setUp()
         try:
             Aqf.step('Setting up Signal Generator.')
-            self.signalGen = signalGen.SCPI(host=self._HOSTIP)
+            self.signalGen = signalGen.SCPI(host=Credentials.hostip)
             self.signalGen.reset()
         except Exception:
             raise RuntimeError("Failed to connect to signal generator")

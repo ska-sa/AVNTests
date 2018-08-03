@@ -4,6 +4,7 @@ chainmap
 coloredlogs
 flake8
 flake8-html
+git+https://github.com/ska-sa/casperfpga.git
 git+https://github.com/ska-sa/nosekatreport.git@karoocbf
 h5py
 idna==2.5
@@ -26,3 +27,4 @@ PyPDF2
 python-dotenv
 requests[security]
 sh
+tables

@@ -5,6 +5,7 @@ from __future__ import print_function
 
 import argparse
 import functools
+import glob
 import h5py
 import katcp
 import logging
@@ -13,6 +14,8 @@ import os
 import paramiko
 import sys
 import time
+
+from avn_tests.utils import Credentials
 
 # import matplotlib.pyplot as plt
 # import pandas as pd
@@ -50,13 +53,12 @@ class LoggingClass(object):
 
 
 class AVN_Rx(LoggingClass):
-    def __init__(self, katcp_ip='127.0.0.1', katcp_port=7147, timeout=10, username=None,
-                password=None):
-        self._katcp_ip = katcp_ip
-        self._katcp_port = katcp_port
-        self._timeout = timeout
-        self._username = os.environ.get('USER')
-        self._password = password
+    def __init__(self):
+        self._katcp_ip = Credentials.katcpip
+        self._katcp_port = 7147
+        self._timeout = 10
+        self._username = Credentials.username
+        self._password = Credentials.password
         self._setUp()
 
     def _setUp(self):
@@ -207,27 +209,28 @@ class AVN_Rx(LoggingClass):
 
         try:
             epoch_time = time.time()
-            # print (time.ctime())
             latestfile = None
-            latestfile = max(glob.iglob('*'.join([self._dir_remote, file_format])), key=os.path.getctime)
+            latestfile = max(glob.iglob('*'.join([self._dir_remote, file_format])),
+                key=os.path.getctime)
             assert os.path.exists(latestfile)
             file_timestamp = latestfile.split('/')[-1].replace('.h5', '').replace("\\@ 0 0", '')
             pattern = "%Y-%m-%dT%H.%M.%S.%f"
             epoch_timestamp = int(time.mktime(time.strptime(file_timestamp, pattern)))
-            comp_timestamp = epoch_time - epoch_timestamp
-            # print epoch_timestamp, epoch_time, comp_timestamp
-            # print latestfile
-            self.logger.debug("Extracting data from HDF5 ({})".format(latestfile))
-            with h5py.File(latestfile, 'r') as fin:
-                data = fin['Data'].values()
-                for element in data:
-                    if element.name.find('VisData') > -1:
-                        data_raw = np.array(element.value)
-                        # print np.max(data_raw), np.min(data_raw)
-            self.logger.info("Backup the latest HDF5 ({}) file to {}".format(self._dir_remote,
-                self._dir_local_dump))
-            os.rename(latestfile, '/'.join([self._dir_local_dump, latestfile.split('/')[-1]]))
-            return data_raw
+            comp_timestamp = abs(epoch_time - epoch_timestamp)
+            print ("epoch_timestamp:{}, epoch_time:{}, comp_timestamp:{}".format(epoch_timestamp,
+                epoch_time, comp_timestamp))
+            if comp_timestamp <= 5:
+                self.logger.debug("Extracting data from HDF5 ({})".format(latestfile))
+                with h5py.File(latestfile, 'r') as fin:
+                    data = fin['Data'].values()
+                    for element in data:
+                        if element.name.find('VisData') > -1:
+                            data_raw = np.array(element.value)
+                            # print ("Max Data: {}, Min Data: {}".format(np.max(data_raw), np.min(data_raw)))
+                self.logger.info("Backup the latest HDF5 ({}) file to {}".format(self._dir_remote,
+                    self._dir_local_dump))
+                os.rename(latestfile, '/'.join([self._dir_local_dump, latestfile.split('/')[-1]]))
+                return data_raw
         except AssertionError:
             raise RuntimeError
         except Exception as exc:
