@@ -1,6 +1,6 @@
 
 # AVNTests
-AVN Correlator Unit and Acceptance Testing based Framework
+[African VLBI Network](https://www.ska.ac.za/science-engineering/avn/) (AVN) Correlator Unit and Acceptance Testing based Framework
 
 ## Installation
 
@@ -20,22 +20,19 @@ Step-by-step instructions.
 ```
 # Install Python essentials and pip
 $ curl -s https://bootstrap.pypa.io/get-pip.py | python
-$ pip install --user virtualenv
+$ pip install --user virtualenv # or sudo pip install virtualenv
 
 # Install testing dependencies in the virtualenv
 $ git clone https://github.com/ska-sa/AVNTests
 $ cd AVNTests
-$ virtualenv .venv
-$ . .venv/bin/activate
-$ $(which pip) install -e .
+$ make bootstrap
 ```
 
 ## Unit Testing
 
 Running unit-testing.
 ```
-$ . venv/bin/activate
-# to follow...
+$ make channelisation # This will run channelisation (Defined) test only
 ```
 
 ## Contributors
