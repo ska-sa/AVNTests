@@ -78,6 +78,8 @@ class test_AVN(unittest.TestCase):
             # Wideband
             # Nfft = 2048
             self.Nfft = float(self.avnControl.sensor_request('roachSizeOfCoarseFFT')[-1])
+            # self.Nfft = float(self.avnControl.sensor_request('roachSizeOfCoarseFFT')[-1]) * (
+            #     self.avnControl.sensor_request('roachSizeOfFineFFT')[-1])
             # Narrow band
             # Nfft = 512 * 4096
             acc_len = int(self.bandwidth / self.Nfft * acc_time)
@@ -177,7 +179,7 @@ class test_AVN(unittest.TestCase):
         last_source_freq = None
         print_counts = 3
 
-        cw_power = -11
+        cw_power = -16.0
         Aqf.step(
             'Configured signal generator to generate a continuous wave (cwg0), with {} dBm '.format(
                 cw_power))

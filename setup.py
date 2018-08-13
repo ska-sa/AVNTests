@@ -39,7 +39,7 @@ try:
     install_reqs = parse_requirements("pip-requirements.txt",  session=PipSession())
     __install_requires__ = [str(ir.req) for ir in install_reqs]
     try:
-        __install_requires__.remove('None')
+        __install_requires__ = filter('None'.__ne__, __install_requires__)
     except ValueError:
         pass
 except Exception:
