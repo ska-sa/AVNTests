@@ -21,30 +21,16 @@ import time
 import unittest
 import numpy as np
 
-from avn_tests.aqf_utils import aqf_plot_and_save
-from avn_tests.aqf_utils import aqf_plot_channels
-from avn_tests.aqf_utils import aqf_plot_histogram
-from avn_tests.aqf_utils import aqf_plot_phase_results
-from avn_tests.aqf_utils import cls_end_aqf
-from avn_tests.aqf_utils import test_heading
-
-from avn_tests.utils import calc_freq_samples
-from avn_tests.utils import channel_center_freqs
-from avn_tests.utils import Credentials
-from avn_tests.utils import complexise
-from avn_tests.utils import executed_by
-from avn_tests.utils import loggerise
-from avn_tests.utils import normalised_magnitude
-from avn_tests.utils import wipd
-
 from avn_tests import signalGen
+from avn_tests.aqf_utils import aqf_plot_and_save, aqf_plot_channels, aqf_plot_histogram, aqf_plot_phase_results
+from avn_tests.aqf_utils import cls_end_aqf, test_heading
+
+from avn_tests.utils import calc_freq_samples, channel_center_freqs, Credentials, complexise, executed_by
+from avn_tests.utils import loggerise, normalised_magnitude, wipd
+
 from avn_tests.avn_rx import AVN_Rx
 
-from nosekatreport import Aqf
-from nosekatreport import aqf_requirements
-from nosekatreport import aqf_vr
-from nosekatreport import satisfies_vr
-from nosekatreport import system
+from nosekatreport import Aqf, aqf_requirements, aqf_vr, satisfies_vr, system
 
 from descriptions import TestProcedure
 
