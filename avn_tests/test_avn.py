@@ -23,7 +23,7 @@ import numpy as np
 
 from avn_tests import signalGen
 from avn_tests.aqf_utils import aqf_plot_and_save, aqf_plot_channels, aqf_plot_histogram, aqf_plot_phase_results
-from avn_tests.aqf_utils import cls_end_aqf, test_heading
+from avn_tests.aqf_utils import aqf_plot_xy, cls_end_aqf, test_heading
 
 from avn_tests.utils import calc_freq_samples, channel_center_freqs, Credentials, complexise, executed_by
 from avn_tests.utils import loggerise, normalised_magnitude, wipd
@@ -133,19 +133,6 @@ class test_AVN(unittest.TestCase):
             else:
                 Aqf.failed(self.errmsg)
 
-    def _test_bc8n856M4k_linearity(self, instrument='bc8n856M4k'):
-        """Linearity Test (bc8n856M4k)
-        Step noise dithered CW and plot output power
-        """
-        if self.set_instrument(instrument, acc_time=0.2):
-            self._linearity(
-                test_channel=100,
-                cw_start_scale=1,
-                noise_scale=0.001,
-                gain='10+j',
-                fft_shift=8191,
-                max_steps=20)
-
     # def _test_channelisation(self, test_chan=212):
     def _test_channelisation(self, test_chan=212):
         req_chan_spacing = self.bandwidth / self.n_chans
@@ -165,7 +152,7 @@ class test_AVN(unittest.TestCase):
         last_source_freq = None
         print_counts = 3
 
-        cw_power = -16.0
+        cw_power = -8.0
         Aqf.step(
             'Configured signal generator to generate a continuous wave (cwg0), with {} dBm '.format(
                 cw_power))
@@ -679,120 +666,148 @@ class test_AVN(unittest.TestCase):
                                 normalise=0,
                                 caption=caption)
 
-    def _linearity(self, test_channel, cw_start_scale, noise_scale, gain, fft_shift, max_steps):
-
-        ch_list = self.corr_freqs.chan_freqs
-
-        def get_cw_val(cw_scale, noise_scale, gain, fft_shift, test_channel, inp):
-            Aqf.step('Digitiser simulator configured to generate a continuous wave, '
-                     'with cw scale: {}, awgn scale: {}, eq gain: {}, fft shift: {}'.format(
-                         cw_scale, noise_scale, gain, fft_shift))
-            dsim_set_success = set_input_levels(
-                self,
-                awgn_scale=noise_scale,
-                cw_scale=cw_scale,
-                freq=ch_list[test_channel] + 50000,
-                fft_shift=fft_shift,
-                gain=gain)
-            if not dsim_set_success:
-                Aqf.failed('Failed to configure digitise simulator levels')
-                return False
-
-            try:
-                dump = self.receiver.get_clean_dump(DUMP_TIMEOUT)
-            except Queue.Empty:
-                errmsg = 'Could not retrieve clean SPEAD accumulation: Queue is Empty.'
-                Aqf.failed(errmsg)
-                LOGGER.exception(errmsg)
-            try:
-                baseline_lookup = get_baselines_lookup(dump)
-                # Choose baseline for phase comparison
-                baseline_index = baseline_lookup[(inp, inp)]
-            except KeyError:
-                Aqf.failed('Initial SPEAD accumulation does not contain correct baseline '
-                           'ordering format.')
-                return False
-            data = dump['xeng_raw'].value
-            freq_response = complexise(data[:, baseline_index, :])
-            return 10 * np.log10(np.abs(freq_response[test_channel]))
-
-        Aqf.hop('Requesting input labels.')
+    @aqf_vr('TBD')
+    @aqf_requirements("TBD")
+    def test_linearity(self):
+        #Aqf.procedure(TestProcedure.LBandEfficiency)
         try:
-            # Build dictionary with inputs and
-            # which fhosts they are associated with.
-            reply, informs = self.corr_fix.katcp_rct.req.input_labels()
-            if reply.reply_ok():
-                inp = reply.arguments[1:][0]
-        except Exception as ex:
-            Aqf.failed('Failed to get input lables. KATCP Reply: {}'.format(reply))
+            assert eval(os.getenv('DRY_RUN', 'False'))
+        except AssertionError:
+            instrument_success = self.set_instrument()
+            if instrument_success:
+                self._test_linearity(test_channel=100,
+                                cw_start_scale = -8.0,
+                                gain = '32',
+                                fft_shift = 2047,
+                                max_steps = 45)
+            else:
+                Aqf.failed(self.errmsg)
+
+
+    def _test_linearity(self, test_channel, cw_start_scale, gain, fft_shift, max_steps):
+
+        ch_bandwidth = self.bandwidth / self.n_chans
+        f_start = 400000000.
+        f_offset = 50000
+        ch_list = f_start + np.arange(self.n_chans) * ch_bandwidth
+        freq = ch_list[self.n_chans-test_channel] + f_offset
+        try:
+            Aqf.step('Setting signal generator frequency to: {:.6f} MHz'.format(freq / 1000000.))
+            _set_freq = self.signalGen.setFrequency(freq)
+            assert _set_freq == freq
+            #Aqf.passed("Signal Generator set successfully.")
+        except Exception as exc:
+            LOGGER.error("Failed to set Signal Generator parameters")
             return False
-        Aqf.hop('Sampling input {}'.format(inp))
+
+        def get_cw_val(cw_scale,gain,fft_shift,test_channel):
+            local_freq = ch_list[self.n_chans-test_channel] + f_offset
+            #Aqf.step('Signal generator configured to generate a continuous wave at: '
+            #        '{:.6f} MHz, cw scale: {} dBm, eq gain: {}, fft shift: {}'.format(
+            #                                                                freq / 1000000.,
+            #                                                                cw_scale,
+            #                                                                gain,
+            #                                                                fft_shift))
+
+
+            try:
+                if local_freq != freq:
+                    Aqf.step('Setting signal generator frequency to: {:.6f} MHz'.format(freq / 1000000.))
+                    _set_freq = self.signalGen.setFrequency(local_freq)
+                    assert _set_freq == local_freq
+                Aqf.step('Setting signal generator level to: {} dBm'.format(cw_scale))
+                _set_pw = self.signalGen.setPower(cw_scale)
+                assert _set_pw == cw_scale
+                #Aqf.passed("Signal Generator set successfully.")
+                self.avnControl.startCapture()
+                time.sleep(3)
+            except Exception as exc:
+                LOGGER.error("Failed to set Signal Generator parameters")
+                return False
+
+            try:
+                LOGGER.info('Capture a dump via HDF5 file.')
+                dump = self.avnControl.get_hdf5(stopCapture=True)
+                self.assertIsInstance(dump, np.ndarray)
+            except Exception:
+                errmsg = 'Could not retrieve clean HDF5 accumulation.'
+                LOGGER.error(errmsg)
+                Aqf.failed(errmsg)
+                return
+            # Dump shape = time, channels, left and right values]
+            # Use left
+            channel_resp = dump[:-1, test_channel, 0]
+            channel_resp = channel_resp.sum(axis=0)/channel_resp.shape[0]
+            return 10*np.log10(np.abs(channel_resp))
+
         cw_scale = cw_start_scale
-        cw_delta = 0.1
-        threshold = 10 * np.log10(pow(2, 30))
-        curr_val = threshold
+        cw_delta = 1.0
+        fullscale = 10*np.log10(pow(2,32))
+        curr_val = fullscale
         Aqf.hop('Finding starting cw input scale...')
         max_cnt = max_steps
-        while (curr_val >= threshold) and max_cnt:
+        while (curr_val >= fullscale) and max_cnt:
             prev_val = curr_val
-            curr_val = get_cw_val(cw_scale, noise_scale, gain, fft_shift, test_channel, inp)
+            curr_val = get_cw_val(cw_scale,gain,fft_shift,test_channel)
+            Aqf.hop('curr_val = {}'.format(curr_val))
             cw_scale -= cw_delta
-            if cw_scale < 0:
-                max_cnt = 0
-                cw_scale = 0
-            else:
-                max_cnt -= 1
-        cw_start_scale = cw_scale + cw_delta
+            max_cnt -= 1
+        cw_start_scale = cw_scale + 4*cw_delta
         Aqf.hop('Starting cw input scale set to {}'.format(cw_start_scale))
         cw_scale = cw_start_scale
         output_power = []
         x_val_array = []
         # Find closes point to this power to place linear expected line.
-        exp_step = 6
-        exp_y_lvl = 70
-        exp_y_dlt = exp_step / 2
-        exp_y_lvl_lwr = exp_y_lvl - exp_y_dlt
-        exp_y_lvl_upr = exp_y_lvl + exp_y_dlt
-        exp_y_val = 0
-        exp_x_val = 0
+        #exp_step = 6
+        #exp_y_lvl = 70
+        #exp_y_dlt = exp_step/2
+        #exp_y_lvl_lwr = exp_y_lvl-exp_y_dlt
+        #exp_y_lvl_upr = exp_y_lvl+exp_y_dlt
+        #exp_y_val = 0
+        #exp_x_val = 0
         min_cnt_val = 3
         min_cnt = min_cnt_val
         max_cnt = max_steps
         while min_cnt and max_cnt:
-            curr_val = get_cw_val(cw_scale, noise_scale, gain, fft_shift, test_channel, inp)
-            if exp_y_lvl_lwr < curr_val < exp_y_lvl_upr:
-                exp_y_val = curr_val
-                exp_x_val = 20 * np.log10(cw_scale)
-            step = curr_val - prev_val
+            curr_val = get_cw_val(cw_scale,gain,fft_shift,test_channel)
+            #if exp_y_lvl_lwr < curr_val < exp_y_lvl_upr:
+            #    exp_y_val = curr_val
+            #    exp_x_val = cw_scale
+            step = curr_val-prev_val
             if np.abs(step) < 0.2 or curr_val < 0:
                 min_cnt -= 1
             else:
                 min_cnt = min_cnt_val
-            x_val_array.append(20 * np.log10(cw_scale))
-            Aqf.step('CW power = {}dB, Step = {}dB, channel = {}'.format(
-                curr_val, step, test_channel))
-            prev_val = curr_val
+            x_val_array.append(cw_scale)
+            Aqf.step('CW power = {}dB, Step = {}dB, channel = {}'.format(curr_val, step, test_channel))
+            prev_val=curr_val
             output_power.append(curr_val)
-            cw_scale = cw_scale / 2
+            cw_scale -= cw_delta
             max_cnt -= 1
+        output_power = np.array(output_power)
+        output_power = output_power - output_power.max()
 
-        plt_filename = '{}_cbf_response_{}_{}_{}.png'.format(self._testMethodName, gain,
-                                                             noise_scale, cw_start_scale)
-        plt_title = 'CBF Response (Linearity Test)'
-        caption = ('Digitiser Simulator start scale: {}, end scale: {}. Scale '
-                   'halved for every step. FFT Shift: {}, Quantiser Gain: {}, '
-                   'Noise scale: {}'.format(cw_start_scale, cw_scale * 2, fft_shift, gain,
-                                            noise_scale))
+        plt_filename = '{}_cbf_response_{}_{}.png'.format(self._testMethodName,gain,cw_start_scale)
+        plt_title = 'Response (Linearity Test)'
+        caption = ('Signal generator start level: {} dBm, end level: {} dBm. '
+                   'FFT Shift: {}, Quantiser Gain: {}'
+                   ''.format(cw_start_scale, cw_scale, fft_shift,
+                                            gain))
+        exp_idx = int(len(x_val_array)/3)
         m = 1
-        c = exp_y_val - m * exp_x_val
+        #c = exp_y_val - m*exp_x_val
+        c = output_power[exp_idx] - m*x_val_array[exp_idx]
         y_exp = []
         for x in x_val_array:
-            y_exp.append(m * x + c)
-        aqf_plot_xy(
-            zip(([x_val_array, output_power], [x_val_array, y_exp]), ['Response', 'Expected']),
-            plt_filename,
-            plt_title,
-            caption,
-            xlabel='Input Power [dB]',
-            ylabel='Integrated Output Power [dB]')
+            y_exp.append(m*x + c)
+        aqf_plot_xy(zip(([x_val_array,output_power],[x_val_array,y_exp]),['Response','Expected']),
+                     plt_filename, plt_title, caption,
+                     xlabel='Input Power [dBm]',
+                     ylabel='Integrated Output Power [dBfs]')
         Aqf.end(passed=True, message='TBD')
+
+
+
+
+
+

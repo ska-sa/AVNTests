@@ -149,6 +149,7 @@ class AVN_Rx(LoggingClass):
             self.logger.error(errmsg)
             raise RuntimeError(errmsg)
 
+        #import IPython;IPython.embed()
         try:
             self.logger.debug("Extracting data from HDF5 ({})".format(new_file))
             with h5py.File(new_file, 'r') as fin:
@@ -198,7 +199,7 @@ class AVN_Rx(LoggingClass):
             latestfile = max(glob.iglob('*'.join([self._dir_remote, file_format])),
                 key=os.path.getctime)
             assert os.path.exists(latestfile)
-            file_timestamp = latestfile.split('/')[-1].replace('.h5', '').replace("\\@ 0 0", '')
+            file_timestamp = latestfile.split('/')[-1].replace('.h5', '').replace("\\@ 0 0", '').replace('_','')
             pattern = "%Y-%m-%dT%H.%M.%S.%f"
             epoch_timestamp = int(time.mktime(time.strptime(file_timestamp, pattern)))
             comp_timestamp = abs(epoch_time - epoch_timestamp - settling_time)
