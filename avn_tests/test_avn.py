@@ -38,7 +38,7 @@ LOGGER = logging.getLogger(__file__)
 
 
 @cls_end_aqf
-@system('all')
+@system('avn')
 class test_AVN(unittest.TestCase):
     """ Unit-testing class for AVN tests"""
 
