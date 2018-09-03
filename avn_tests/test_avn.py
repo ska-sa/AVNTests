@@ -68,7 +68,8 @@ class test_AVN(unittest.TestCase):
             #     self.avnControl.sensor_request('roachSizeOfFineFFT')[-1])
             # Narrow band
             # Nfft = 512 * 4096
-            acc_len = int(self.bandwidth / self.Nfft * acc_time)
+            # TODO This is going to need to be revised to detect the narrowband case properly.
+            acc_len = int(2*self.bandwidth / self.Nfft * acc_time)
             Aqf.step('Set and confirm accumulation period via CAM interface.')
             reply, _ = self.avnControl.katcp_request(
                 katcprequest='setRoachAccumulationLength', katcprequestArg=acc_len)
