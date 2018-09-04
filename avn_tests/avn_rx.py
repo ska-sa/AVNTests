@@ -240,6 +240,16 @@ class AVN_Rx(LoggingClass):
         except Exception as exc:
             self.logger.error("Failed to stop recording: {}".format(exc))
 
+    def setGain(self, gain):
+        try:
+            reply, informs = self.katcp_request(katcprequest="setRoachDspGain {}".format(gain))
+            assert reply.reply_ok()
+            actual_gain = self.sensor_request("roachDspGain")[-1]
+            self.logger.debug(("Set digital gain to {}, actual {}".format(gain, actual_gain)))
+            return reply
+        except Exception as exc:
+            self.logger.error("Failed to set DSP gain: {}".format(exc))
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Copy data from AVN system')

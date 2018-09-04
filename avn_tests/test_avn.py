@@ -808,6 +808,145 @@ class test_AVN(unittest.TestCase):
         Aqf.end(passed=True, message='TBD')
 
 
+    @aqf_vr('TBD')
+    @aqf_requirements("TBD")
+    def test_digital_gain(self):
+        #Aqf.procedure(TestProcedure.LBandEfficiency)
+        try:
+            assert eval(os.getenv('DRY_RUN', 'False'))
+        except AssertionError:
+            instrument_success = self.set_instrument()
+            if instrument_success:
+                self._test_digital_gain(test_channel=100,
+                                cw_scale = -15.0,
+                                gain_start = 1024,
+                                fft_shift = 2047,
+                                max_steps = 100)
+            else:
+                Aqf.failed(self.errmsg)
+
+
+
+    def _test_digital_gain(self, test_channel, cw_scale, gain_start, fft_shift, max_steps):
+        # This works out what frequency to set the cw source at.
+        ch_bandwidth = self.bandwidth / self.n_chans
+        f_start = 400000000.
+        f_offset = 50000
+        ch_list = f_start + np.arange(self.n_chans) * ch_bandwidth
+        freq = ch_list[self.n_chans-test_channel] + f_offset
+        try:
+            Aqf.step('Setting signal generator frequency to: {:.6f} MHz'.format(freq / 1000000.))
+            _set_freq = self.signalGen.setFrequency(freq)
+            assert _set_freq == freq
+            #Aqf.passed("Signal Generator set successfully.")
+        except Exception as exc:
+            LOGGER.error("Failed to set Signal Generator parameters")
+            return False
+
+        def get_cw_val(cw_scale,gain,fft_shift,test_channel):
+            """Get the CW power value from the given channel."""
+            local_freq = ch_list[self.n_chans-test_channel] + f_offset
+
+            try:
+                Aqf.step("Setting digital gain to: {}".format(gain))
+                self.avnControl.setGain(gain)
+                if local_freq != freq:
+                    Aqf.step('Setting signal generator frequency to: {:.6f} MHz'.format(freq / 1000000.))
+                    _set_freq = self.signalGen.setFrequency(local_freq)
+                    assert _set_freq == local_freq
+                Aqf.step('Setting signal generator level to: {} dBm'.format(cw_scale))
+                _set_pw = self.signalGen.setPower(cw_scale)
+                assert _set_pw == cw_scale
+                #Aqf.passed("Signal Generator set successfully.")
+                self.avnControl.startCapture()
+                time.sleep(3)
+            except Exception as exc:
+                LOGGER.error("Failed to set Signal Generator parameters")
+                return False
+
+            try:
+                LOGGER.info('Capture a dump via HDF5 file.')
+                dump = self.avnControl.get_hdf5(stopCapture=True)
+                self.assertIsInstance(dump, np.ndarray)
+            except Exception: # TODO - this is bad.
+                errmsg = 'Could not retrieve clean HDF5 accumulation.'
+                LOGGER.error(errmsg)
+                Aqf.failed(errmsg)
+                return
+            # Dump shape = time, channels, left and right values]
+            # Use left
+            channel_resp = dump[:-1, test_channel, 0]
+            channel_resp = channel_resp.sum(axis=0)/channel_resp.shape[0]
+            return 10*np.log10(np.abs(channel_resp))
+
+        # Determine the start of the range, find out where it stops saturating.
+        gain = gain_start
+        gain_delta = 0.5
+        fullscale = 10*np.log10(pow(2,32))
+        curr_val = fullscale
+        Aqf.hop('Finding starting gain...')
+        max_cnt = max_steps
+        while (curr_val >= fullscale) and max_cnt:
+            prev_val = curr_val
+            curr_val = get_cw_val(cw_scale,gain,fft_shift,test_channel)
+            Aqf.hop('curr_val = {}'.format(curr_val))
+            gain -= gain_delta
+            max_cnt -= 1
+        gain_start = gain + 4*gain_delta
+        Aqf.hop('Starting gain set to {}'.format(gain_start))
+
+        gain = gain_start
+        output_power = []
+        x_val_array = []
+        # Find closes point to this power to place linear expected line.
+        #exp_step = 6
+        #exp_y_lvl = 70
+        #exp_y_dlt = exp_step/2
+        #exp_y_lvl_lwr = exp_y_lvl-exp_y_dlt
+        #exp_y_lvl_upr = exp_y_lvl+exp_y_dlt
+        #exp_y_val = 0
+        #exp_x_val = 0
+        min_cnt_val = 3
+        min_cnt = min_cnt_val
+        max_cnt = max_steps
+        while min_cnt and max_cnt:
+            curr_val = get_cw_val(cw_scale,gain,fft_shift,test_channel)
+            #if exp_y_lvl_lwr < curr_val < exp_y_lvl_upr:
+            #    exp_y_val = curr_val
+            #    exp_x_val = cw_scale
+            step = curr_val-prev_val
+            if np.abs(step) < 0.2 or curr_val < 0:
+                min_cnt -= 1
+            else:
+                min_cnt = min_cnt_val
+            x_val_array.append(gain)
+            Aqf.step('CW power = {}dB, Step = {}dB, channel = {}'.format(curr_val, step, test_channel))
+            prev_val=curr_val
+            output_power.append(curr_val)
+            gain -= gain_delta
+            max_cnt -= 1
+        output_power = np.array(output_power)
+        output_power = output_power - output_power.max()
+
+        plt_filename = '{}_cbf_response_{}_{}.png'.format(self._testMethodName,cw_scale,gain_start)
+        plt_title = 'Response (Gain Test)'
+        caption = ('Gain start level: {}, end level: {}. '
+                   'Signal generator level: {}, FFT Shift: {}, Quantiser Gain: {}'
+                   ''.format(gain_start, gain, cw_scale, fft_shift,
+                                            gain))
+        exp_idx = int(len(x_val_array)/3)
+        m = 1
+        #c = exp_y_val - m*exp_x_val
+        c = output_power[exp_idx] - m*x_val_array[exp_idx]
+        y_exp = []
+        for x in x_val_array:
+            y_exp.append(m*x + c)
+        aqf_plot_xy(zip(([x_val_array,output_power],[x_val_array,y_exp]),['Response','Expected']),
+                     plt_filename, plt_title, caption,
+                     xlabel='Digital gain',
+                     ylabel='Integrated Output Power [dBfs]')
+        Aqf.end(passed=True, message='TBD')
+
 
 
 
