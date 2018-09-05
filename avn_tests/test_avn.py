@@ -859,7 +859,7 @@ class test_AVN(unittest.TestCase):
                 assert _set_pw == cw_scale
                 #Aqf.passed("Signal Generator set successfully.")
                 self.avnControl.startCapture()
-                time.sleep(3)
+                time.sleep(1)
             except Exception as exc:
                 LOGGER.error("Failed to set Signal Generator parameters")
                 return False
@@ -877,12 +877,12 @@ class test_AVN(unittest.TestCase):
             # Use left
             channel_resp = dump[:-1, test_channel, 0]
             channel_resp = channel_resp.sum(axis=0)/channel_resp.shape[0]
-            return 10*np.log10(np.abs(channel_resp))
+            return channel_resp
 
         # Determine the start of the range, find out where it stops saturating.
         gain = gain_start
         gain_delta = 2.0
-        fullscale = 10*np.log10(pow(2,32))
+        fullscale = pow(2,32)
         curr_val = fullscale
         Aqf.hop('Finding starting gain...')
         max_cnt = max_steps
@@ -890,7 +890,7 @@ class test_AVN(unittest.TestCase):
             prev_val = curr_val
             curr_val = get_cw_val(cw_scale,gain,fft_shift,test_channel)
             Aqf.hop('curr_val = {}'.format(curr_val))
-            gain /= gain_delta
+            gain -= gain_delta
             max_cnt -= 1
         gain_start = gain + 4*gain_delta
         Aqf.hop('Starting gain set to {}'.format(gain_start))
@@ -914,7 +914,7 @@ class test_AVN(unittest.TestCase):
             #if exp_y_lvl_lwr < curr_val < exp_y_lvl_upr:
             #    exp_y_val = curr_val
             #    exp_x_val = cw_scale
-            step = curr_val-prev_val
+            step = prev_val/curr_val
             if np.abs(step) < 0.2 or curr_val < 0:
                 min_cnt -= 1
             else:
@@ -923,7 +923,7 @@ class test_AVN(unittest.TestCase):
             Aqf.step('CW power = {}dB, Step = {}dB, channel = {}'.format(curr_val, step, test_channel))
             prev_val=curr_val
             output_power.append(curr_val)
-            gain /= gain_delta
+            gain -= gain_delta
             max_cnt -= 1
         output_power = np.array(output_power)
         output_power = output_power - output_power.max()
@@ -944,7 +944,7 @@ class test_AVN(unittest.TestCase):
         aqf_plot_xy(zip(([x_val_array,output_power],[x_val_array,y_exp]),['Response','Expected']),
                      plt_filename, plt_title, caption,
                      xlabel='Digital gain',
-                     ylabel='Integrated Output Power [dBfs]')
+                     ylabel='Integrated Output Power [raw]')
         Aqf.end(passed=True, message='TBD')
 
 
