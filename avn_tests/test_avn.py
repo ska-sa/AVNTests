@@ -678,7 +678,7 @@ class test_AVN(unittest.TestCase):
             if instrument_success:
                 self._test_linearity(test_channel=100,
                                 cw_start_scale = -8.0,
-                                gain = '32',
+                                gain = 32,
                                 fft_shift = 2047,
                                 max_steps = 45)
             else:
@@ -819,7 +819,7 @@ class test_AVN(unittest.TestCase):
             if instrument_success:
                 self._test_digital_gain(test_channel=100,
                                 cw_scale = -15.0,
-                                gain_start = 1024,
+                                gain_start = 64.0,
                                 fft_shift = 2047,
                                 max_steps = 100)
             else:
@@ -881,7 +881,7 @@ class test_AVN(unittest.TestCase):
 
         # Determine the start of the range, find out where it stops saturating.
         gain = gain_start
-        gain_delta = 0.5
+        gain_delta = 2.0
         fullscale = 10*np.log10(pow(2,32))
         curr_val = fullscale
         Aqf.hop('Finding starting gain...')
@@ -890,7 +890,7 @@ class test_AVN(unittest.TestCase):
             prev_val = curr_val
             curr_val = get_cw_val(cw_scale,gain,fft_shift,test_channel)
             Aqf.hop('curr_val = {}'.format(curr_val))
-            gain -= gain_delta
+            gain /= gain_delta
             max_cnt -= 1
         gain_start = gain + 4*gain_delta
         Aqf.hop('Starting gain set to {}'.format(gain_start))
@@ -923,7 +923,7 @@ class test_AVN(unittest.TestCase):
             Aqf.step('CW power = {}dB, Step = {}dB, channel = {}'.format(curr_val, step, test_channel))
             prev_val=curr_val
             output_power.append(curr_val)
-            gain -= gain_delta
+            gain /= gain_delta
             max_cnt -= 1
         output_power = np.array(output_power)
         output_power = output_power - output_power.max()

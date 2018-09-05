@@ -244,7 +244,7 @@ class AVN_Rx(LoggingClass):
             reply, informs = self.katcp_request(katcprequest="setRoachDspGain", katcprequestArg="{}".format(gain))
             assert reply.reply_ok()
             actual_gain = float(self.sensor_request("roachDspGain")[-1])
-            assert np.floor(actual_gain) == np.floor(gain), "Gain not set."
+            #assert np.floor(actual_gain) == np.floor(gain), "Gain not set."
             self.logger.debug(("Set digital gain to {}, actual {}".format(gain, actual_gain)))
             return reply
         except Exception as exc:
