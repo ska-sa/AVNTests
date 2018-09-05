@@ -178,7 +178,6 @@ class AVN_Rx(LoggingClass):
             self.logger.debug("Backup the latest HDF5 file to {}".format(self._dir_local_dump))
             os.rename(new_file, '/'.join([self._dir_local_dump, latestfile]))
             # return data_stokes
-            # import IPython; globals().update(locals()); IPython.embed(header='Python Debugger')
             return data_raw
         except Exception:
             self.logger.error("Issues with the file name")
@@ -245,6 +244,7 @@ class AVN_Rx(LoggingClass):
             reply, informs = self.katcp_request(katcprequest="setRoachDspGain", katcprequestArg="{}".format(gain))
             assert reply.reply_ok()
             actual_gain = self.sensor_request("roachDspGain")[-1]
+            assert int(gain) == int(actual_gain), "Gain not set."
             self.logger.debug(("Set digital gain to {}, actual {}".format(gain, actual_gain)))
             return reply
         except Exception as exc:
