@@ -5,7 +5,7 @@ linearity:
 gain:
 	sh -c '. .venv/bin/activate; nosetests -sv --with-katreport --logging-level=DEBUG avn_tests/test_avn.py:test_AVN.test_digital_gain'
 accumulation:
-    sh -c '. .venv/bin/activate; nosetests -sv --with-katreport --logging-level=DEBUG avn_tests/test_avn.py:test_AVN.test_accumulation_length'
+	sh -c '. .venv/bin/activate; nosetests -sv --with-katreport --logging-level=DEBUG avn_tests/test_avn.py:test_AVN.test_accumulation_length'
 
 
 clean:
