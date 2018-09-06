@@ -876,7 +876,7 @@ class test_AVN(unittest.TestCase):
             # Use left
             channel_resp = dump[:-1, test_channel, 0]
             channel_resp = channel_resp.sum(axis=0)/channel_resp.shape[0]
-            return channel_resp
+            return np.sqrt(channel_resp)
 
         # Determine the start of the range, find out where it stops saturating.
         gain = gain_start
@@ -922,7 +922,9 @@ class test_AVN(unittest.TestCase):
             Aqf.step('CW power = {}dB, Step = {}dB, channel = {}'.format(curr_val, step, test_channel))
             prev_val=curr_val
             output_power.append(curr_val)
-            gain /= gain_delta
+            gain -= gain_delta
+            if gain <= 0:
+                break
             max_cnt -= 1
         output_power = np.array(output_power)
         #output_power = output_power - output_power.max()
@@ -1075,11 +1077,11 @@ class test_AVN(unittest.TestCase):
         output_power = np.array(output_power)
         #output_power = output_power - output_power.max()
 
-        plt_filename = '{}_cbf_response_{}_{}.png'.format(self._testMethodName,cw_scale,gain_start)
+        plt_filename = '{}_cbf_response_{}_{}.png'.format(self._testMethodName,cw_scale,accum_length_start)
         plt_title = 'Response (Gain Test)'
-        caption = ('Gain start level: {}, end level: {}. '
+        caption = ('Accum length start level: {}, end level: {}. '
                    'Signal generator level: {}, FFT Shift: {}, Quantiser Gain: {}'
-                   ''.format(gain_start, gain, cw_scale, fft_shift,
+                   ''.format(accum_length_start, accum_length, cw_scale, fft_shift,
                                             gain))
         exp_idx = int(len(x_val_array)/3)
         m = 1
