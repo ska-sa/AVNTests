@@ -187,10 +187,10 @@ class AVN_Rx(LoggingClass):
         """
         get local HDF5 file
         """
-        settling_time = 0.5
+        settling_time = 1.5
         if stopCapture:
             self.stopCapture()
-            while self.sensor_request("recordingStopTime")[-1] != 0 and timeout:
+            while int(self.sensor_request("recordingStopTime")[-1]) != 0 and timeout:
                 timeout -= 1
                 time.sleep(settling_time)
             if not timeout:
