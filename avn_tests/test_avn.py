@@ -979,6 +979,9 @@ class test_AVN(unittest.TestCase):
             Aqf.step('Setting signal generator frequency to: {:.6f} MHz'.format(freq / 1000000.))
             _set_freq = self.signalGen.setFrequency(freq)
             assert _set_freq == freq
+            Aqf.step('Setting signal generator level to: {} dBm'.format(cw_scale))
+            _set_pw = self.signalGen.setPower(cw_scale)
+            assert _set_pw == cw_scale
             #Aqf.passed("Signal Generator set successfully.")
         except Exception as exc:
             LOGGER.error("Failed to set Signal Generator parameters")
