@@ -1037,7 +1037,7 @@ class test_AVN(unittest.TestCase):
         max_cnt = max_steps
         while (curr_val >= fullscale) and max_cnt:
             prev_val = curr_val
-            curr_val = get_cw_val(cw_scale,gain,fft_shift,test_channel)
+            curr_val = get_cw_val(cw_scale,gain,fft_shift,accum_length,test_channel)
             Aqf.hop('curr_val = {}'.format(curr_val))
             accum_length -= accum_length_delta
             max_cnt -= 1
