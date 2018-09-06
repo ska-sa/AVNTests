@@ -877,7 +877,7 @@ class test_AVN(unittest.TestCase):
             # Use left
             channel_resp = dump[:-1, test_channel, 0]
             channel_resp = channel_resp.sum(axis=0)/channel_resp.shape[0]
-            return channel_resp
+            return np.sqrt(channel_resp)
 
         # Determine the start of the range, find out where it stops saturating.
         gain = gain_start
@@ -924,6 +924,8 @@ class test_AVN(unittest.TestCase):
             prev_val=curr_val
             output_power.append(curr_val)
             gain -= gain_delta
+            if gain <= 0:
+                break
             max_cnt -= 1
         output_power = np.array(output_power)
         output_power = output_power - output_power.max()
