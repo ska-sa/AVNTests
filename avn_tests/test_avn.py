@@ -998,11 +998,11 @@ class test_AVN(unittest.TestCase):
                     katcprequest='setRoachAccumulationLength', katcprequestArg=acc_len*390625) # Because it counts in spectra.
                 assert reply.reply_ok()
                 actual_acc_len = int(self.avnControl.sensor_request('roachAccumulationLength')[-1])
-                time.sleep(acc_len) # To let the accumulator adjust to the new accumulation length.
+                time.sleep(5) # To let the accumulator adjust to the new accumulation length.
 
                 #Aqf.passed("Signal Generator set successfully.")
                 self.avnControl.startCapture()
-                time.sleep(2*acc_len) # Just to make sure.
+                time.sleep(2*acc_len + 1) # Just to make sure.
             except Exception as exc:
                 LOGGER.error("Failed to set Signal Generator parameters")
                 return False
