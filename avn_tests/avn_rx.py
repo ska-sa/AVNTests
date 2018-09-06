@@ -223,6 +223,7 @@ class AVN_Rx(LoggingClass):
                 self.logger.info("Backup the latest HDF5 ({}) file to {}".format(self._dir_remote,
                     self._dir_local_dump))
                 os.rename(latestfile, '/'.join([self._dir_local_dump, latestfile.split('/')[-1]]))
+                self.logger.debug("get_hdf5() returning: {}".format(data_raw))
                 return data_raw
         except AssertionError:
             raise RuntimeError
