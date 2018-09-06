@@ -110,29 +110,29 @@ class test_AVN(unittest.TestCase):
 
     # @aqf_vr('CBF.V.4.7')
     # @aqf_requirements("CBF-REQ-0096")
-    def test_accumulation_length(self):
-        # The CBF shall set the Baseline Correlation Products accumulation interval to a fixed time
-        # in the range $$500 +0 -20ms$$.
-        Aqf.procedure(TestProcedure.VectorAcc)
-        try:
-            assert eval(os.getenv('DRY_RUN', 'False'))
-        except AssertionError:
-            instrument_success = self.set_instrument()
-            if instrument_success:
-                if '32k' in self.instrument:
-                    Aqf.step('Testing maximum channels to %s due to quantiser snap-block and '
-                             'system performance limitations.' % self.n_chans_selected)
-                chan_index = self.n_chans_selected
-                n_chans = self.cam_sensors.get_value('n_chans')
-                test_chan = random.choice(range(n_chans)[:self.n_chans_selected])
-                n_ants = self.cam_sensors.get_value('n_ants')
-                if n_ants == 4:
-                    acc_time = 0.998
-                else:
-                    acc_time = 2 * n_ants / 32.
-                self._test_vacc(test_chan, chan_index, acc_time)
-            else:
-                Aqf.failed(self.errmsg)
+    # def test_accumulation_length(self):
+    #     # The CBF shall set the Baseline Correlation Products accumulation interval to a fixed time
+    #     # in the range $$500 +0 -20ms$$.
+    #     Aqf.procedure(TestProcedure.VectorAcc)
+    #     try:
+    #         assert eval(os.getenv('DRY_RUN', 'False'))
+    #     except AssertionError:
+    #         instrument_success = self.set_instrument()
+    #         if instrument_success:
+    #             if '32k' in self.instrument:
+    #                 Aqf.step('Testing maximum channels to %s due to quantiser snap-block and '
+    #                          'system performance limitations.' % self.n_chans_selected)
+    #             chan_index = self.n_chans_selected
+    #             n_chans = self.cam_sensors.get_value('n_chans')
+    #             test_chan = random.choice(range(n_chans)[:self.n_chans_selected])
+    #             n_ants = self.cam_sensors.get_value('n_ants')
+    #             if n_ants == 4:
+    #                 acc_time = 0.998
+    #             else:
+    #                 acc_time = 2 * n_ants / 32.
+    #             self._test_vacc(test_chan, chan_index, acc_time)
+    #         else:
+    #             Aqf.failed(self.errmsg)
 
     # def _test_channelisation(self, test_chan=212):
     def _test_channelisation(self, test_chan=212):
@@ -517,155 +517,155 @@ class test_AVN(unittest.TestCase):
                 '{co_high_src_freq}) is within the range of {desired_cutoff_resp} +- 1% '
                 'relative to channel centre response.'.format(**locals()))
 
-    def _test_vacc(self, test_chan, chan_index=None, acc_time=0.998):
-        """Test vector accumulator"""
-        # Choose a test frequency around the centre of the band.
-        test_freq = self.bandwidth / 2.
-
-        test_input = self.cam_sensors.input_labels[0]
-        eq_scaling = 30
-        acc_times = [acc_time / 2, acc_time]
-        #acc_times = [acc_time/2, acc_time, acc_time*2]
-        n_chans = self.cam_sensors.get_value("n_chans")
-        try:
-            internal_accumulations = int(self.cam_sensors.get_value('xeng_acc_len'))
-        except Exception as e:
-            errmsg = 'Failed to retrieve X-engine accumulation length: %s.' % str(e)
-            LOGGER.exception(errmsg)
-            Aqf.failed(errmsg)
-        try:
-            initial_dump = get_clean_dump(self)
-            assert isinstance(initial_dump, dict)
-        except Exception:
-            errmsg = 'Could not retrieve clean SPEAD accumulation: Queue is Empty.'
-            Aqf.failed(errmsg)
-            LOGGER.exception(errmsg)
-            return
-
-        delta_acc_t = self.cam_sensors.fft_period * internal_accumulations
-        test_acc_lens = [np.ceil(t / delta_acc_t) for t in acc_times]
-        test_freq_channel = abs(
-            np.argmin(np.abs(self.cam_sensors.ch_center_freqs[:chan_index] - test_freq)) -
-            test_chan)
-        Aqf.step('Selected test input {} and test frequency channel {}'.format(
-            test_input, test_freq_channel))
-        eqs = np.zeros(n_chans, dtype=np.complex)
-        eqs[test_freq_channel] = eq_scaling
-        get_and_restore_initial_eqs(self)
-        try:
-            reply, _informs = self.avnControl.katcp_rct.req.gain(test_input, *list(eqs))
-            assert reply.reply_ok()
-            Aqf.hop('Gain successfully set on input %s via CAM interface.' % test_input)
-        except Exception:
-            errmsg = 'Gains/Eq could not be set on input %s via CAM interface' % test_input
-            Aqf.failed(errmsg)
-            LOGGER.exception(errmsg)
-
-        Aqf.step('Configured Digitiser simulator output(cw0 @ {:.3f}MHz) to be periodic in '
-                 'FFT-length: {} in order for each FFT to be identical'.format(
-                     test_freq / 1e6, n_chans * 2))
-
-        cw_scale = 0.125
-        # The re-quantiser outputs signed int (8bit), but the snapshot code
-        # normalises it to floats between -1:1. Since we want to calculate the
-        # output of the vacc which sums integers, denormalise the snapshot
-        # output back to ints.
-        # q_denorm = 128
-        # quantiser_spectrum = get_quant_snapshot(self, test_input) * q_denorm
-        try:
-            # Make dsim output periodic in FFT-length so that each FFT is identical
-            self.signalGen.sine_sources.sin_0.set(
-                frequency=test_freq, scale=cw_scale, repeat_n=n_chans * 2)
-            self.signalGen.sine_sources.sin_1.set(
-                frequency=test_freq, scale=cw_scale, repeat_n=n_chans * 2)
-            assert self.signalGen.sine_sources.sin_0.repeat == n_chans * 2
-        except AssertionError:
-            errmsg = 'Failed to make the DEng output periodic in FFT-length so that each FFT is identical'
-            Aqf.failed(errmsg)
-            LOGGER.exception(errmsg)
-        try:
-            reply, informs = self.avnControl.katcp_rct.req.quantiser_snapshot(test_input)
-            assert reply.reply_ok()
-            informs = informs[0]
-        except Exception:
-            errmsg = ('Failed to retrieve quantiser snapshot of input %s via '
-                      'CAM Interface: \nReply %s' % (test_input, str(reply).replace('_', ' ')))
-            Aqf.failed(errmsg)
-            LOGGER.exception(errmsg)
-            return
-        else:
-            quantiser_spectrum = np.array(eval(informs.arguments[-1]))
-            if chan_index:
-                quantiser_spectrum = quantiser_spectrum[:chan_index]
-            # Check that the spectrum is not zero in the test channel
-            # Aqf.is_true(quantiser_spectrum[test_freq_channel] != 0,
-            # 'Check that the spectrum is not zero in the test channel')
-            # Check that the spectrum is zero except in the test channel
-            Aqf.is_true(
-                np.all(quantiser_spectrum[0:test_freq_channel] == 0),
-                'Confirm that the spectrum is zero except in the test channel:'
-                ' [0:test_freq_channel]')
-            Aqf.is_true(
-                np.all(quantiser_spectrum[test_freq_channel + 1:] == 0),
-                'Confirm that the spectrum is zero except in the test channel:'
-                ' [test_freq_channel+1:]')
-            Aqf.step('FFT Window [{} samples] = {:.3f} micro seconds, Internal Accumulations = {}, '
-                     'One VACC accumulation = {}s'.format(n_chans * 2,
-                                                          self.cam_sensors.fft_period * 1e6,
-                                                          internal_accumulations, delta_acc_t))
-
-            chan_response = []
-            for vacc_accumulations, acc_time in zip(test_acc_lens, acc_times):
-                try:
-                    reply = self.avnControl.katcp_rct.req.accumulation_length(acc_time, timeout=60)
-                    assert reply.succeeded
-                except Exception:
-                    Aqf.failed('Failed to set accumulation length of {} after maximum vacc '
-                               'sync attempts.'.format(vacc_accumulations))
-                else:
-                    internal_acc = (2 * internal_accumulations * n_chans)
-                    accum_len = int(
-                        np.ceil((acc_time * self.cam_sensors.get_value('sample')) / internal_acc))
-                    Aqf.almost_equals(
-                        vacc_accumulations, accum_len, 1,
-                        'Confirm that vacc length was set successfully with'
-                        ' {}, which equates to an accumulation time of {:.6f}s'.format(
-                            vacc_accumulations, vacc_accumulations * delta_acc_t))
-                    no_accs = internal_accumulations * vacc_accumulations
-                    expected_response = np.abs(quantiser_spectrum)**2 * no_accs
-                    try:
-                        dump = get_clean_dump(self)
-                        assert isinstance(dump, dict)
-                    except Exception:
-                        errmsg = 'Could not retrieve clean SPEAD accumulation: Queue is Empty.'
-                        Aqf.failed(errmsg)
-                        LOGGER.exception(errmsg)
-                    else:
-                        actual_response_mag = normalised_magnitude(dump['xeng_raw'][:, 0, :])
-                        chan_response.append(actual_response_mag)
-                        # Check that the accumulator response is equal to the expected response
-                        caption = (
-                            'Accumulators actual response is equal to the expected response for {} '
-                            'accumulation length with a periodic cw tone every {} samples'
-                            ' at frequency of {:.3f} MHz with scale {}.'.format(
-                                test_acc_lens, n_chans * 2, test_freq / 1e6, cw_scale))
-
-                        plot_filename = ('{}/{}_chan_resp_{}_vacc.png'.format(
-                            self.logs_path, self._testMethodName, int(vacc_accumulations)))
-                        plot_title = ('Vector Accumulation Length: channel %s' % test_freq_channel)
-                        msg = ('Confirm that the accumulator actual response is '
-                               'equal to the expected response for {} accumulation length'.format(
-                                   vacc_accumulations))
-
-                        if not Aqf.array_abs_error(expected_response[:chan_index],
-                                                   actual_response_mag[:chan_index], msg):
-                            aqf_plot_channels(
-                                actual_response_mag,
-                                plot_filename,
-                                plot_title,
-                                log_normalise_to=0,
-                                normalise=0,
-                                caption=caption)
+    # def _test_vacc(self, test_chan, chan_index=None, acc_time=0.998):
+    #     """Test vector accumulator"""
+    #     # Choose a test frequency around the centre of the band.
+    #     test_freq = self.bandwidth / 2.
+    #
+    #     test_input = self.cam_sensors.input_labels[0]
+    #     eq_scaling = 30
+    #     acc_times = [acc_time / 2, acc_time]
+    #     #acc_times = [acc_time/2, acc_time, acc_time*2]
+    #     n_chans = self.cam_sensors.get_value("n_chans")
+    #     try:
+    #         internal_accumulations = int(self.cam_sensors.get_value('xeng_acc_len'))
+    #     except Exception as e:
+    #         errmsg = 'Failed to retrieve X-engine accumulation length: %s.' % str(e)
+    #         LOGGER.exception(errmsg)
+    #         Aqf.failed(errmsg)
+    #     try:
+    #         initial_dump = get_clean_dump(self)
+    #         assert isinstance(initial_dump, dict)
+    #     except Exception:
+    #         errmsg = 'Could not retrieve clean SPEAD accumulation: Queue is Empty.'
+    #         Aqf.failed(errmsg)
+    #         LOGGER.exception(errmsg)
+    #         return
+    #
+    #     delta_acc_t = self.cam_sensors.fft_period * internal_accumulations
+    #     test_acc_lens = [np.ceil(t / delta_acc_t) for t in acc_times]
+    #     test_freq_channel = abs(
+    #         np.argmin(np.abs(self.cam_sensors.ch_center_freqs[:chan_index] - test_freq)) -
+    #         test_chan)
+    #     Aqf.step('Selected test input {} and test frequency channel {}'.format(
+    #         test_input, test_freq_channel))
+    #     eqs = np.zeros(n_chans, dtype=np.complex)
+    #     eqs[test_freq_channel] = eq_scaling
+    #     get_and_restore_initial_eqs(self)
+    #     try:
+    #         reply, _informs = self.avnControl.katcp_rct.req.gain(test_input, *list(eqs))
+    #         assert reply.reply_ok()
+    #         Aqf.hop('Gain successfully set on input %s via CAM interface.' % test_input)
+    #     except Exception:
+    #         errmsg = 'Gains/Eq could not be set on input %s via CAM interface' % test_input
+    #         Aqf.failed(errmsg)
+    #         LOGGER.exception(errmsg)
+    #
+    #     Aqf.step('Configured Digitiser simulator output(cw0 @ {:.3f}MHz) to be periodic in '
+    #              'FFT-length: {} in order for each FFT to be identical'.format(
+    #                  test_freq / 1e6, n_chans * 2))
+    #
+    #     cw_scale = 0.125
+    #     # The re-quantiser outputs signed int (8bit), but the snapshot code
+    #     # normalises it to floats between -1:1. Since we want to calculate the
+    #     # output of the vacc which sums integers, denormalise the snapshot
+    #     # output back to ints.
+    #     # q_denorm = 128
+    #     # quantiser_spectrum = get_quant_snapshot(self, test_input) * q_denorm
+    #     try:
+    #         # Make dsim output periodic in FFT-length so that each FFT is identical
+    #         self.signalGen.sine_sources.sin_0.set(
+    #             frequency=test_freq, scale=cw_scale, repeat_n=n_chans * 2)
+    #         self.signalGen.sine_sources.sin_1.set(
+    #             frequency=test_freq, scale=cw_scale, repeat_n=n_chans * 2)
+    #         assert self.signalGen.sine_sources.sin_0.repeat == n_chans * 2
+    #     except AssertionError:
+    #         errmsg = 'Failed to make the DEng output periodic in FFT-length so that each FFT is identical'
+    #         Aqf.failed(errmsg)
+    #         LOGGER.exception(errmsg)
+    #     try:
+    #         reply, informs = self.avnControl.katcp_rct.req.quantiser_snapshot(test_input)
+    #         assert reply.reply_ok()
+    #         informs = informs[0]
+    #     except Exception:
+    #         errmsg = ('Failed to retrieve quantiser snapshot of input %s via '
+    #                   'CAM Interface: \nReply %s' % (test_input, str(reply).replace('_', ' ')))
+    #         Aqf.failed(errmsg)
+    #         LOGGER.exception(errmsg)
+    #         return
+    #     else:
+    #         quantiser_spectrum = np.array(eval(informs.arguments[-1]))
+    #         if chan_index:
+    #             quantiser_spectrum = quantiser_spectrum[:chan_index]
+    #         # Check that the spectrum is not zero in the test channel
+    #         # Aqf.is_true(quantiser_spectrum[test_freq_channel] != 0,
+    #         # 'Check that the spectrum is not zero in the test channel')
+    #         # Check that the spectrum is zero except in the test channel
+    #         Aqf.is_true(
+    #             np.all(quantiser_spectrum[0:test_freq_channel] == 0),
+    #             'Confirm that the spectrum is zero except in the test channel:'
+    #             ' [0:test_freq_channel]')
+    #         Aqf.is_true(
+    #             np.all(quantiser_spectrum[test_freq_channel + 1:] == 0),
+    #             'Confirm that the spectrum is zero except in the test channel:'
+    #             ' [test_freq_channel+1:]')
+    #         Aqf.step('FFT Window [{} samples] = {:.3f} micro seconds, Internal Accumulations = {}, '
+    #                  'One VACC accumulation = {}s'.format(n_chans * 2,
+    #                                                       self.cam_sensors.fft_period * 1e6,
+    #                                                       internal_accumulations, delta_acc_t))
+    #
+    #         chan_response = []
+    #         for vacc_accumulations, acc_time in zip(test_acc_lens, acc_times):
+    #             try:
+    #                 reply = self.avnControl.katcp_rct.req.accumulation_length(acc_time, timeout=60)
+    #                 assert reply.succeeded
+    #             except Exception:
+    #                 Aqf.failed('Failed to set accumulation length of {} after maximum vacc '
+    #                            'sync attempts.'.format(vacc_accumulations))
+    #             else:
+    #                 internal_acc = (2 * internal_accumulations * n_chans)
+    #                 accum_len = int(
+    #                     np.ceil((acc_time * self.cam_sensors.get_value('sample')) / internal_acc))
+    #                 Aqf.almost_equals(
+    #                     vacc_accumulations, accum_len, 1,
+    #                     'Confirm that vacc length was set successfully with'
+    #                     ' {}, which equates to an accumulation time of {:.6f}s'.format(
+    #                         vacc_accumulations, vacc_accumulations * delta_acc_t))
+    #                 no_accs = internal_accumulations * vacc_accumulations
+    #                 expected_response = np.abs(quantiser_spectrum)**2 * no_accs
+    #                 try:
+    #                     dump = get_clean_dump(self)
+    #                     assert isinstance(dump, dict)
+    #                 except Exception:
+    #                     errmsg = 'Could not retrieve clean SPEAD accumulation: Queue is Empty.'
+    #                     Aqf.failed(errmsg)
+    #                     LOGGER.exception(errmsg)
+    #                 else:
+    #                     actual_response_mag = normalised_magnitude(dump['xeng_raw'][:, 0, :])
+    #                     chan_response.append(actual_response_mag)
+    #                     # Check that the accumulator response is equal to the expected response
+    #                     caption = (
+    #                         'Accumulators actual response is equal to the expected response for {} '
+    #                         'accumulation length with a periodic cw tone every {} samples'
+    #                         ' at frequency of {:.3f} MHz with scale {}.'.format(
+    #                             test_acc_lens, n_chans * 2, test_freq / 1e6, cw_scale))
+    #
+    #                     plot_filename = ('{}/{}_chan_resp_{}_vacc.png'.format(
+    #                         self.logs_path, self._testMethodName, int(vacc_accumulations)))
+    #                     plot_title = ('Vector Accumulation Length: channel %s' % test_freq_channel)
+    #                     msg = ('Confirm that the accumulator actual response is '
+    #                            'equal to the expected response for {} accumulation length'.format(
+    #                                vacc_accumulations))
+    #
+    #                     if not Aqf.array_abs_error(expected_response[:chan_index],
+    #                                                actual_response_mag[:chan_index], msg):
+    #                         aqf_plot_channels(
+    #                             actual_response_mag,
+    #                             plot_filename,
+    #                             plot_title,
+    #                             log_normalise_to=0,
+    #                             normalise=0,
+    #                             caption=caption)
 
     @aqf_vr('TBD')
     @aqf_requirements("TBD")
@@ -826,7 +826,6 @@ class test_AVN(unittest.TestCase):
                 Aqf.failed(self.errmsg)
 
 
-
     def _test_digital_gain(self, test_channel, cw_scale, gain_start, fft_shift, max_steps):
         # This works out what frequency to set the cw source at.
         ch_bandwidth = self.bandwidth / self.n_chans
@@ -890,7 +889,7 @@ class test_AVN(unittest.TestCase):
             prev_val = curr_val
             curr_val = get_cw_val(cw_scale,gain,fft_shift,test_channel)
             Aqf.hop('curr_val = {}'.format(curr_val))
-            gain -= gain_delta
+            gain /= gain_delta
             max_cnt -= 1
         gain_start = gain + 4*gain_delta
         Aqf.hop('Starting gain set to {}'.format(gain_start))
@@ -923,10 +922,158 @@ class test_AVN(unittest.TestCase):
             Aqf.step('CW power = {}dB, Step = {}dB, channel = {}'.format(curr_val, step, test_channel))
             prev_val=curr_val
             output_power.append(curr_val)
-            gain -= gain_delta
+            gain /= gain_delta
             max_cnt -= 1
         output_power = np.array(output_power)
-        output_power = output_power - output_power.max()
+        #output_power = output_power - output_power.max()
+
+        plt_filename = '{}_cbf_response_{}_{}.png'.format(self._testMethodName,cw_scale,gain_start)
+        plt_title = 'Response (Gain Test)'
+        caption = ('Gain start level: {}, end level: {}. '
+                   'Signal generator level: {}, FFT Shift: {}, Quantiser Gain: {}'
+                   ''.format(gain_start, gain, cw_scale, fft_shift,
+                                            gain))
+        exp_idx = int(len(x_val_array)/3)
+        m = 1
+        #c = exp_y_val - m*exp_x_val
+        c = output_power[exp_idx] - m*x_val_array[exp_idx]
+        y_exp = []
+        for x in x_val_array:
+            y_exp.append(m*x + c)
+        aqf_plot_xy(zip(([x_val_array,output_power],[x_val_array,y_exp]),['Response','Expected']),
+                     plt_filename, plt_title, caption,
+                     xlabel='Digital gain',
+                     ylabel='Integrated Output Power [raw]')
+        Aqf.end(passed=True, message='TBD')
+
+
+    @aqf_vr('TBD')
+    @aqf_requirements("TBD")
+    def test_accumulation_length(self):
+        #Aqf.procedure(TestProcedure.LBandEfficiency)
+        try:
+            assert eval(os.getenv('DRY_RUN', 'False'))
+        except AssertionError:
+            instrument_success = self.set_instrument()
+            if instrument_success:
+                self._test_accumulation_length(test_channel=100,
+                                cw_scale = -15.0,
+                                gain = 32.0,
+                                fft_shift = 2047,
+                                accum_length_start=2.0,
+                                max_steps = 100)
+            else:
+                Aqf.failed(self.errmsg)
+
+
+    def _test_accumulation_length(self, test_channel, cw_scale, gain, fft_shift, accum_length_start, max_steps):
+        # This works out what frequency to set the cw source at.
+        ch_bandwidth = self.bandwidth / self.n_chans
+        f_start = 400000000.
+        f_offset = 50000
+        ch_list = f_start + np.arange(self.n_chans) * ch_bandwidth
+        freq = ch_list[self.n_chans-test_channel] + f_offset
+        try:
+            Aqf.step('Setting signal generator frequency to: {:.6f} MHz'.format(freq / 1000000.))
+            _set_freq = self.signalGen.setFrequency(freq)
+            assert _set_freq == freq
+            #Aqf.passed("Signal Generator set successfully.")
+        except Exception as exc:
+            LOGGER.error("Failed to set Signal Generator parameters")
+            return False
+
+        def get_cw_val(cw_scale,gain,fft_shift,acc_len,test_channel):
+            """Get the CW power value from the given channel."""
+            local_freq = ch_list[self.n_chans-test_channel] + f_offset
+
+            try:
+                Aqf.step("Setting digital gain to: {}".format(gain))
+                self.avnControl.setGain(gain)
+
+                Aqf.step("Setting accumulation length to: {}".format(acc_len))
+                reply, _ = self.avnControl.katcp_request(
+                    katcprequest='setRoachAccumulationLength', katcprequestArg=acc_len)
+                assert reply.reply_ok()
+                actual_acc_len = int(self.avnControl.sensor_request('roachAccumulationLength')[-1])
+                time.sleep(acc_len) # To let the accumulator adjust to the new accumulation length.
+
+                if local_freq != freq:
+                    Aqf.step('Setting signal generator frequency to: {:.6f} MHz'.format(freq / 1000000.))
+                    _set_freq = self.signalGen.setFrequency(local_freq)
+                    assert _set_freq == local_freq
+                Aqf.step('Setting signal generator level to: {} dBm'.format(cw_scale))
+                _set_pw = self.signalGen.setPower(cw_scale)
+                assert _set_pw == cw_scale
+                #Aqf.passed("Signal Generator set successfully.")
+                self.avnControl.startCapture()
+                time.sleep(2*acc_len) # Just to make sure.
+            except Exception as exc:
+                LOGGER.error("Failed to set Signal Generator parameters")
+                return False
+
+            try:
+                LOGGER.info('Capture a dump via HDF5 file.')
+                dump = self.avnControl.get_hdf5(stopCapture=True)
+                self.assertIsInstance(dump, np.ndarray)
+            except Exception: # TODO - this is bad.
+                errmsg = 'Could not retrieve clean HDF5 accumulation.'
+                LOGGER.error(errmsg)
+                Aqf.failed(errmsg)
+                return
+            # Dump shape = time, channels, left and right values]
+            # Use left
+            channel_resp = dump[:-1, test_channel, 0]
+            channel_resp = channel_resp.sum(axis=0)/channel_resp.shape[0]
+            return channel_resp
+
+        # Determine the start of the range, find out where it stops saturating.
+        accum_length = accum_length_start
+        accum_length_delta = 0.125
+        fullscale = pow(2,32)
+        curr_val = fullscale
+        Aqf.hop('Finding starting gain...')
+        max_cnt = max_steps
+        while (curr_val >= fullscale) and max_cnt:
+            prev_val = curr_val
+            curr_val = get_cw_val(cw_scale,gain,fft_shift,test_channel)
+            Aqf.hop('curr_val = {}'.format(curr_val))
+            accum_length -= accum_length_delta
+            max_cnt -= 1
+        accum_length_start = accum_length + 4*accum_length_delta
+        Aqf.hop('Starting accumulation length set to {}'.format(accum_length_start))
+
+        accum_length = accum_length_start
+        output_power = []
+        x_val_array = []
+        # Find closes point to this power to place linear expected line.
+        #exp_step = 6
+        #exp_y_lvl = 70
+        #exp_y_dlt = exp_step/2
+        #exp_y_lvl_lwr = exp_y_lvl-exp_y_dlt
+        #exp_y_lvl_upr = exp_y_lvl+exp_y_dlt
+        #exp_y_val = 0
+        #exp_x_val = 0
+        min_cnt_val = 3
+        min_cnt = min_cnt_val
+        max_cnt = max_steps
+        while min_cnt and max_cnt:
+            curr_val = get_cw_val(cw_scale,gain,fft_shift,accum_length,test_channel)
+            #if exp_y_lvl_lwr < curr_val < exp_y_lvl_upr:
+            #    exp_y_val = curr_val
+            #    exp_x_val = cw_scale
+            step = prev_val/curr_val
+            if np.abs(step) < 0.2 or curr_val < 0:
+                min_cnt -= 1
+            else:
+                min_cnt = min_cnt_val
+            x_val_array.append(accum_length)
+            Aqf.step('Accum length = {}s, Step = {}, channel = {}'.format(curr_val, step, test_channel))
+            prev_val=curr_val
+            output_power.append(curr_val)
+            accum_length -= accum_length_delta
+            max_cnt -= 1
+        output_power = np.array(output_power)
+        #output_power = output_power - output_power.max()
 
         plt_filename = '{}_cbf_response_{}_{}.png'.format(self._testMethodName,cw_scale,gain_start)
         plt_title = 'Response (Gain Test)'
