@@ -183,13 +183,19 @@ class AVN_Rx(LoggingClass):
             self.logger.error("Issues with the file name")
             return
 
-    def get_hdf5(self, file_format='.h5', stopCapture=False):
+    def get_hdf5(self, file_format='.h5', stopCapture=False, timeout=10):
         """
         get local HDF5 file
         """
         settling_time = 0.5
         if stopCapture:
             self.stopCapture()
+            while self.sensor_request("recordingStopTime")[-1] != 0 and timeout:
+                timeout -= 1
+                time.sleep(settling_time)
+            if not timeout:
+                raise RuntimeError("Timed out while waiting for recording to stop!")
+
             time.sleep(settling_time)
 
         try:
