@@ -999,7 +999,7 @@ class test_AVN(unittest.TestCase):
                 assert reply.reply_ok()
                 actual_acc_len = int(self.avnControl.sensor_request('roachAccumulationLength')[-1])
                 Aqf.equals(int(acc_len*390625), actual_acc_len,
-                           "Accumulation length set to {} frames".format(acc_len))
+                           "Accumulation length set to {} frames".format(actual_acc_len))
 
 
                 time.sleep(acc_len)
@@ -1013,8 +1013,8 @@ class test_AVN(unittest.TestCase):
                 LOGGER.info('Capture a dump via HDF5 file.')
                 dump = self.avnControl.get_hdf5(stopCapture=True)
                 self.assertIsInstance(dump, np.ndarray)
-            except Exception: # TODO - this is bad.
-                errmsg = 'Could not retrieve clean HDF5 accumulation.'
+            except Exception as exc:
+                errmsg = 'Could not retrieve clean HDF5 accumulation, error reported: {}'.format(exc)
                 LOGGER.error(errmsg)
                 Aqf.failed(errmsg)
                 return

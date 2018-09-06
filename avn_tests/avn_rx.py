@@ -228,7 +228,7 @@ class AVN_Rx(LoggingClass):
             return self.katcp_request(katcprequest='startRecording', katcprequestArg='\@ 0 {}'.format(
                 recording_duration)) if recording_duration else self.katcp_request(katcprequest='startRecording')
         except Exception as exc:
-            self.logger.error("Failed to stop recording: {}".format(exc))
+            self.logger.error("Failed to start recording: {}".format(exc))
 
     def stopCapture(self):
         try:
