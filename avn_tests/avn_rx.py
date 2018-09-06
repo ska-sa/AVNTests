@@ -114,7 +114,7 @@ class AVN_Rx(LoggingClass):
         """
         if stopCapture:
             self.stopCapture()
-            time.sleep(1)
+            time.sleep(3) # Give it a bit more time to finish writing out.
 
         latest = 0
         latestfile = None
