@@ -187,7 +187,7 @@ class AVN_Rx(LoggingClass):
         """
         get local HDF5 file
         """
-        settling_time = 1.5
+        settling_time = 0.5
         if stopCapture:
             self.stopCapture()
             while int(self.sensor_request("recordingStopTime")[-1]) != 0 and timeout:
@@ -211,7 +211,7 @@ class AVN_Rx(LoggingClass):
             self.logger.info(
                 "Data timestamps -> epoch_timestamp:{}, epoch_time:{}, comp_timestamp:{}".format(
                     epoch_timestamp, epoch_time, comp_timestamp))
-            if comp_timestamp <= 10:
+            if comp_timestamp <= 20: # This used to be 10. Is there a specific reason?
                 self.logger.debug("Extracting data from HDF5 ({})".format(latestfile))
                 with h5py.File(latestfile, 'r') as fin:
                     data = fin['Data'].values()
