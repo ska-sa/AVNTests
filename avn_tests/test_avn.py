@@ -1059,7 +1059,10 @@ class test_AVN(unittest.TestCase):
             #if exp_y_lvl_lwr < curr_val < exp_y_lvl_upr:
             #    exp_y_val = curr_val
             #    exp_x_val = cw_scale
-            step = prev_val/curr_val
+            try:
+                step = prev_val/curr_val
+            except ZeroDivisionError:
+                step = 0 # Let's just fix it. Maybe this is bad, but I don't think so.
             if np.abs(step) < 0.2 or curr_val < 0:
                 min_cnt -= 1
             else:
