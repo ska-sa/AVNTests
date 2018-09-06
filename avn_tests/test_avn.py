@@ -992,7 +992,7 @@ class test_AVN(unittest.TestCase):
 
                 Aqf.step("Setting accumulation length to: {}".format(acc_len))
                 reply, _ = self.avnControl.katcp_request(
-                    katcprequest='setRoachAccumulationLength', katcprequestArg=acc_len)
+                    katcprequest='setRoachAccumulationLength', katcprequestArg=acc_len*390625) # Because it counts in spectra.
                 assert reply.reply_ok()
                 actual_acc_len = int(self.avnControl.sensor_request('roachAccumulationLength')[-1])
                 time.sleep(acc_len) # To let the accumulator adjust to the new accumulation length.
