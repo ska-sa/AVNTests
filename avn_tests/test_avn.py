@@ -984,13 +984,11 @@ class test_AVN(unittest.TestCase):
             LOGGER.error("Failed to set Signal Generator parameters")
             return False
 
-        def get_cw_val(cw_scale,gain,fft_shift,acc_len,test_channel):
+        def get_cw_val(acc_len,test_channel):
             """Get the CW power value from the given channel."""
             local_freq = ch_list[self.n_chans-test_channel] + f_offset
 
             try:
-                Aqf.step("Setting digital gain to: {}".format(gain))
-                self.avnControl.setGain(gain)
 
                 Aqf.step("Setting accumulation length to: {}".format(acc_len))
                 reply, _ = self.avnControl.katcp_request(
@@ -999,13 +997,6 @@ class test_AVN(unittest.TestCase):
                 actual_acc_len = int(self.avnControl.sensor_request('roachAccumulationLength')[-1])
                 time.sleep(acc_len) # To let the accumulator adjust to the new accumulation length.
 
-                if local_freq != freq:
-                    Aqf.step('Setting signal generator frequency to: {:.6f} MHz'.format(freq / 1000000.))
-                    _set_freq = self.signalGen.setFrequency(local_freq)
-                    assert _set_freq == local_freq
-                Aqf.step('Setting signal generator level to: {} dBm'.format(cw_scale))
-                _set_pw = self.signalGen.setPower(cw_scale)
-                assert _set_pw == cw_scale
                 #Aqf.passed("Signal Generator set successfully.")
                 self.avnControl.startCapture()
                 time.sleep(2*acc_len) # Just to make sure.
@@ -1037,7 +1028,7 @@ class test_AVN(unittest.TestCase):
         max_cnt = max_steps
         while (curr_val >= fullscale) and max_cnt:
             prev_val = curr_val
-            curr_val = get_cw_val(cw_scale,gain,fft_shift,accum_length,test_channel)
+            curr_val = get_cw_val(accum_length,test_channel)
             Aqf.hop('curr_val = {}'.format(curr_val))
             accum_length -= accum_length_delta
             max_cnt -= 1
