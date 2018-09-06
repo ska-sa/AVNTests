@@ -1050,7 +1050,7 @@ class test_AVN(unittest.TestCase):
         min_cnt = min_cnt_val
         max_cnt = max_steps
         while min_cnt and max_cnt:
-            curr_val = get_cw_val(cw_scale,gain,fft_shift,accum_length,test_channel)
+            curr_val = get_cw_val(accum_length,test_channel)
             #if exp_y_lvl_lwr < curr_val < exp_y_lvl_upr:
             #    exp_y_val = curr_val
             #    exp_x_val = cw_scale
