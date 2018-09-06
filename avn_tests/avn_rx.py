@@ -225,6 +225,8 @@ class AVN_Rx(LoggingClass):
                 os.rename(latestfile, '/'.join([self._dir_local_dump, latestfile.split('/')[-1]]))
                 self.logger.debug("get_hdf5() returning: {}".format(data_raw))
                 return data_raw
+            else:
+                self.logger.warn("get_hdf5(): comp_timestamp > 10 - not returning data!")
         except AssertionError:
             raise RuntimeError
         except Exception as exc:
