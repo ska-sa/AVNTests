@@ -1091,7 +1091,7 @@ class test_AVN(unittest.TestCase):
             y_exp.append(m*x + c)
         aqf_plot_xy(zip(([x_val_array,output_power],[x_val_array,y_exp]),['Response','Expected']),
                      plt_filename, plt_title, caption,
-                     xlabel='Digital gain',
+                     xlabel='Accumulation length [s]',
                      ylabel='Integrated Output Power [raw]')
         Aqf.end(passed=True, message='TBD')
 
