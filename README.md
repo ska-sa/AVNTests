@@ -31,10 +31,6 @@ $ make bootstrap
 ## Usage
 
 You will need to create a `$(pwd)/.env` file which contains:
-- USERNAME=<Username on Host - usually: avn>
-- PASSWORD=<Password>
-- HOSTIP=<Signal Generator IP>
-- KATCPIP=<katcp host IP>
 
 ```shell
 touch .env 
