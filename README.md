@@ -28,13 +28,36 @@ $ cd AVNTests
 $ make bootstrap
 ```
 
+## Usage
+
+You will need to create a `$(pwd)/.env` file which contains:
+- USERNAME=<Username on Host - usually: avn>
+- PASSWORD=<Password>
+- HOSTIP=<Signal Generator IP>
+- KATCPIP=<katcp host IP>
+
+```shell
+touch .env 
+
+echo "USERNAME=<Username on Host - usually: avn>" >> "$(pwd)/.env"
+echo "PASSWORD=<Password>" >> "$(pwd)/.env"
+echo "HOSTIP=<Signal Generator IP>" >> "$(pwd)/.env"
+echo "KATCPIP=<katcp host IP>" >> "$(pwd)/.en"v
+```
+
 ## Unit Testing
 
 Running unit-testing.
-```
-$ make channelisation # This will run channelisation (Defined) test only
+```shell
+make channelisation # This will run channelisation (Defined) test only
 ```
 
 ## Contributors
 
  * Mpho Mphego
+ 
+ 
+## Feedback
+
+Feel free to fork it or send me PR to improve it.
+
