@@ -26,7 +26,8 @@ class SCPI(LoggingClass):
                 connection='socket', display_info=False):
         try:
             self.host = host
-            assert isinstance(self.host, str)
+            if not isinstance(self.host, str):
+                raise AssertionError()
             self.port = port
             self._device = device
             self._connection = connection
@@ -52,7 +53,8 @@ class SCPI(LoggingClass):
                 self._sock.settimeout(self._timeout)
                 status = self._sock.connect_ex((self.host, self.port))
                 self.logger.debug("Connected to sigGen on {}:{}".format(self.host, self.port))
-                assert status == 0
+                if not status == 0:
+                    raise AssertionError()
             except AssertionError:
                 msg = "Failed to connect to the sigGen, Link is down!!"
                 self._sock.close()
