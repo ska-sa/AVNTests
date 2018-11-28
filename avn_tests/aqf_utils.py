@@ -158,15 +158,16 @@ def aqf_plot_channels(channelisation, plot_filename='', plot_title='', caption="
             'No display on $DISPLAY environment variable, check matplotlib backend')
         return False
 
+    # This logic could be improved!
     try:
         vlines_plotd = False
         if len(vlines) > 3:
             annotate_text = vlines[-1]
             vlines = vlines[:-1]
-
-        if type(vlines) is list:
+        try:
+            assert isinstance(vlines, list)
             _vlines = iter(vlines)
-        else:
+        except Exception:
             _vlines = vlines
     except:
         pass
