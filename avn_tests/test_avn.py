@@ -21,15 +21,16 @@ import unittest
 
 import numpy as np
 from ast import literal_eval as evaluate
-from nosekatreport import Aqf, aqf_requirements, aqf_vr, satisfies_vr, system
+from nosekatreport import Aqf, aqf_requirements, aqf_vr, system
 
 from avn_tests import signalGen
 from avn_tests.aqf_utils import (aqf_plot_and_save, aqf_plot_channels,
-                                 aqf_plot_histogram, aqf_plot_phase_results,
-                                 aqf_plot_xy, cls_end_aqf, test_heading)
+                                 aqf_plot_phase_results, aqf_plot_xy,
+                                 cls_end_aqf, test_heading)
 from avn_tests.avn_rx import AVN_Rx
 from avn_tests.utils import (Credentials, calc_freq_samples,
-                             channel_center_freqs, complexise, executed_by,
+                             channel_center_freqs, executed_by,
+
                              loggerise, normalised_magnitude, wipd)
 # from descriptions import TestProcedure
 
@@ -706,8 +707,8 @@ class test_AVN(unittest.TestCase):
             if not _set_freq == freq:
                 raise AssertionError()
             #Aqf.passed("Signal Generator set successfully.")
-        except Exception as exc:
-            LOGGER.error("Failed to set Signal Generator parameters")
+        except Exception:
+            LOGGER.error("Failed to set Signal Generator parameters", exc_info=True)
             return False
 
         def get_cw_val(cw_scale,gain,fft_shift,test_channel):

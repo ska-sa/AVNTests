@@ -55,7 +55,7 @@ make channelisation # This will run channelisation (Defined) test only
 
 ## Contributors
 
-*  Mpho Mphego
+-	Mpho Mphego
 
 ## Feedback
 

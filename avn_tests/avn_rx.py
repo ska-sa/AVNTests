@@ -3,7 +3,7 @@
 from __future__ import division, print_function
 
 import argparse
-import functools
+# import functools
 import glob
 import logging
 import os
