@@ -4,10 +4,11 @@
 
 import logging
 import os
-import serial
 import socket
 import sys
 import time
+
+import serial
 
 
 # This class could be imported from a utility module

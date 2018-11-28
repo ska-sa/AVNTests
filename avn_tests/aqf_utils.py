@@ -1,15 +1,12 @@
 import functools
 import logging
-
 from Tkinter import tkinter
+
 import matplotlib.pyplot as plt
 import numpy as np
+from nosekatreport import Aqf
 
 from avn_tests.utils import loggerise
-from nosekatreport import Aqf
-# MEMORY LEAKS DEBUGGING
-# To use, add @DetectMemLeaks decorator to function
-# from memory_profiler import profile as DetectMemLeaks
 
 LOGGER = logging.getLogger(__name__)
 

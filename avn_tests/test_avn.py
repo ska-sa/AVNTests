@@ -11,27 +11,25 @@
 # WRITTEN PERMISSION OF SKA SA.                                               #
 ###############################################################################
 
-from __future__ import division
-from __future__ import print_function
+from __future__ import division, print_function
 
 import logging
 import os
 import random
 import time
 import unittest
+
 import numpy as np
-
-from avn_tests import signalGen
-from avn_tests.aqf_utils import aqf_plot_and_save, aqf_plot_channels, aqf_plot_histogram, aqf_plot_phase_results
-from avn_tests.aqf_utils import aqf_plot_xy, cls_end_aqf, test_heading
-
-from avn_tests.utils import calc_freq_samples, channel_center_freqs, Credentials, complexise, executed_by
-from avn_tests.utils import loggerise, normalised_magnitude, wipd
-
-from avn_tests.avn_rx import AVN_Rx
-
 from nosekatreport import Aqf, aqf_requirements, aqf_vr, satisfies_vr, system
 
+from avn_tests import signalGen
+from avn_tests.aqf_utils import (aqf_plot_and_save, aqf_plot_channels,
+                                 aqf_plot_histogram, aqf_plot_phase_results,
+                                 aqf_plot_xy, cls_end_aqf, test_heading)
+from avn_tests.avn_rx import AVN_Rx
+from avn_tests.utils import (Credentials, calc_freq_samples,
+                             channel_center_freqs, complexise, executed_by,
+                             loggerise, normalised_magnitude, wipd)
 from descriptions import TestProcedure
 
 LOGGER = logging.getLogger(__file__)
@@ -1094,8 +1092,3 @@ class test_AVN(unittest.TestCase):
                      xlabel='Accumulation length [s]',
                      ylabel='Integrated Output Power [raw]')
         Aqf.end(passed=True, message='TBD')
-
-
-
-
-

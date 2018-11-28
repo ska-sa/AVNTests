@@ -1,22 +1,21 @@
 #!/usr/bin/env python
 
-from __future__ import division
-from __future__ import print_function
+from __future__ import division, print_function
 
 import argparse
 import functools
 import glob
-import h5py
-import katcp
 import logging
-import numpy as np
 import os
-import paramiko
 import sys
 import time
 
-from avn_tests.utils import Credentials
-from avn_tests.utils import retry
+import h5py
+import katcp
+import numpy as np
+import paramiko
+
+from avn_tests.utils import Credentials, retry
 
 # import matplotlib.pyplot as plt
 # import pandas as pd
