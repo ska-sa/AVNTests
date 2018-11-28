@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # https://stackoverflow.com/a/44077346
-import atexit
+# import atexit
 import os
 
 from contextlib import contextmanager
