@@ -17,11 +17,9 @@ import paramiko
 
 from avn_tests.utils import Credentials, retry
 
-# import matplotlib.pyplot as plt
-# import pandas as pd
-
 class AllowAnythingPolicy(paramiko.MissingHostKeyPolicy):
-    def missing_host_key(self, client, hostname, key):
+    @classmethod
+    def missing_host_key(cls, client, hostname, key):
         return
 
 
