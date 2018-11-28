@@ -165,7 +165,8 @@ def aqf_plot_channels(channelisation, plot_filename='', plot_title='', caption="
             annotate_text = vlines[-1]
             vlines = vlines[:-1]
         try:
-            assert isinstance(vlines, list)
+            if not isinstance(vlines, list):
+                raise AssertionError()
             _vlines = iter(vlines)
         except Exception:
             _vlines = vlines
