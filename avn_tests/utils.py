@@ -212,7 +212,7 @@ class CSV_Reader(object):
             df = pd.read_csv(self.csv_filename)
             df = df.replace(np.nan, "TBD", regex=True)
             df = df.fillna(method='ffill')
-        except:
+        except Exception:
             return False
         else:
             return df.set_index(self.set_index) if self.set_index else df
