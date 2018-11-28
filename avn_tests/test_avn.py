@@ -30,7 +30,7 @@ from avn_tests.avn_rx import AVN_Rx
 from avn_tests.utils import (Credentials, calc_freq_samples,
                              channel_center_freqs, complexise, executed_by,
                              loggerise, normalised_magnitude, wipd)
-from descriptions import TestProcedure
+# from descriptions import TestProcedure
 
 LOGGER = logging.getLogger(__file__)
 
@@ -149,7 +149,7 @@ class test_AVN(unittest.TestCase):
         # Channel magnitude responses for each frequency
         chan_responses = []
         last_source_freq = None
-        print_counts = 3
+        # print_counts = 3
 
         cw_power = -8.0
         Aqf.step(
@@ -163,8 +163,9 @@ class test_AVN(unittest.TestCase):
             Aqf.passed("Signal Generator set successfully.")
             self.avnControl.startCapture()
             time.sleep(1)
-        except Exception as exc:
-            LOGGER.error("Failed to set Signal Generator parameters")
+        except Exception:
+            LOGGER.error("Failed to set Signal Generator parameters",
+                exc_info=True)
             return False
 
         try:
@@ -416,7 +417,8 @@ class test_AVN(unittest.TestCase):
                 response = chan_responses[ind, test_chan]
                 return ind, source_freq, response
 
-            fc_ind, fc_src_freq, fc_resp = get_close_result(expected_fc)
+            # fc_ind, fc_src_freq, fc_resp = get_close_result(expected_fc)
+            _, fc_src_freq, fc_resp = get_close_result(expected_fc)
             co_low_ind, co_low_src_freq, co_low_resp = get_close_result(co_low_freq)
             co_high_ind, co_high_src_freq, co_high_resp = get_close_result(co_high_freq)
             # [CBF-REQ-0047] CBF channelisation frequency resolution requirement
@@ -987,7 +989,7 @@ class test_AVN(unittest.TestCase):
 
         def get_cw_val(acc_len,test_channel):
             """Get the CW power value from the given channel."""
-            local_freq = ch_list[self.n_chans-test_channel] + f_offset
+            # local_freq = ch_list[self.n_chans-test_channel] + f_offset
 
             try:
 
