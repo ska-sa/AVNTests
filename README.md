@@ -2,6 +2,7 @@
 # AVNTests
 
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/65abea0d64554c5ab27b6aad07496c2d)](https://app.codacy.com/app/mmphego/AVNTests?utm_source=github.com&utm_medium=referral&utm_content=ska-sa/AVNTests&utm_campaign=Badge_Grade_Settings)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/65abea0d64554c5ab27b6aad07496c2d)](https://app.codacy.com/app/mmphego/AVNTests?utm_source=github.com&utm_medium=referral&utm_content=ska-sa/AVNTests&utm_campaign=Badge_Grade_Settings)
 
 [African VLBI Network](https://www.ska.ac.za/science-engineering/avn/) (AVN) Correlator Unit and Acceptance Testing based Framework
 
