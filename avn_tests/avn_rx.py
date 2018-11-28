@@ -99,7 +99,8 @@ class AVN_Rx(LoggingClass):
 
     def sensor_request(self, *args):
         try:
-            assert args > 1
+            if not args > 1:
+                raise AssertionError()
             _, informs = self.katcp_request('sensor-value', args[0])
             return informs[0].arguments
         except Exception as exc:
