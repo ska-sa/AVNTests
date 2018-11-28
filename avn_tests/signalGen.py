@@ -222,6 +222,6 @@ if __name__ == '__main__':
     print 'Closing all ports...'
     try:
         sigme.close()
-    except:
+    except Exception:
         # socket already closed
         pass
