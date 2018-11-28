@@ -270,7 +270,7 @@ def aqf_plot_channels(channelisation, plot_filename='', plot_title='', caption="
             for idx, lines in enumerate(hlines):
                 try:
                     color = plt_line[idx + hline_strt_idx][0].get_color()
-                except:
+                except Exception:
                     color = 'red'
                 plt.axhline(lines, linestyle='dotted',
                             color=color, linewidth=1.5)
