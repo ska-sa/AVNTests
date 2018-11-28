@@ -30,7 +30,7 @@ filterwarnings('ignore')
 
 # Latest tagged stable version
 try:
-  __version__ = check_output(["git", "describe", "--tags"]).rstrip().split('-')[-1]
+  __version__ = check_output(["git", "describe", "--tags"], shell=True).rstrip().split('-')[-1]
 except CalledProcessError:
   __version__ = '0.1'
 
