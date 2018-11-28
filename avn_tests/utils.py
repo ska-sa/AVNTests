@@ -1,22 +1,21 @@
 import contextlib
-import pandas as pd
 import logging
-import numpy as np
 import os
 import pwd
-import random
+# import random
 import signal
-import subprocess
+import socket
+import struct
+# import subprocess
 import time
 import warnings
-import struct
-import socket
-
-from nosekatreport import Aqf
-from nose.plugins.attrib import attr
 from functools import wraps
-from dotenv import load_dotenv
-from dotenv import find_dotenv
+
+import numpy as np
+import pandas as pd
+from dotenv import find_dotenv, load_dotenv
+from nose.plugins.attrib import attr
+from nosekatreport import Aqf
 
 LOGGER = logging.getLogger(__name__)
 load_dotenv(find_dotenv())
@@ -25,20 +24,24 @@ load_dotenv(find_dotenv())
 class Credentials:
     _msg = "Check and ensure that your $(pwd)/.env file exists."
     username = str(os.getenv("USERNAME"))
-    assert username, _msg
+    if not username:
+        raise AssertionError(_msg)
     password = str(os.getenv("PASSWORD"))
-    assert password, _msg
+    if not password:
+        raise AssertionError(_msg)
     hostip = str(os.getenv("HOSTIP"))
-    assert hostip, _msg
+    if not hostip:
+        raise AssertionError(_msg)
     katcpip = str(os.getenv("KATCPIP"))
-    assert katcpip, _msg
+    if not katcpip:
+        raise AssertionError(_msg)
 
 
 def retry(func, count=3, wait_time=300):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        retExc = None
-        for i in xrange(count):
+        retExc = TypeError
+        for _ in xrange(count):
             while True:
                 try:
                     return func(*args, **kwargs)
@@ -209,11 +212,12 @@ class CSV_Reader(object):
             result: Pandas DataFrame
         """
         try:
-            assert self.csv_filename
+            if not self.csv_filename:
+                raise AssertionError()
             df = pd.read_csv(self.csv_filename)
             df = df.replace(np.nan, "TBD", regex=True)
             df = df.fillna(method='ffill')
-        except:
+        except Exception:
             return False
         else:
             return df.set_index(self.set_index) if self.set_index else df
@@ -283,11 +287,16 @@ def calc_freq_samples(self, chan, samples_per_chan, chans_around=0):
     of points are specified.
 
     """
-    assert samples_per_chan > 0
-    assert chans_around > 0
-    assert 0 <= chan < self.n_chans
-    assert 0 <= chan + chans_around < self.n_chans
-    assert 0 <= chan - chans_around < self.n_chans
+    if not samples_per_chan > 0:
+        raise AssertionError()
+    if not chans_around > 0:
+        raise AssertionError()
+    if not 0 <= chan < self.n_chans:
+        raise AssertionError()
+    if not 0 <= chan + chans_around < self.n_chans:
+        raise AssertionError()
+    if not 0 <= chan - chans_around < self.n_chans:
+        raise AssertionError()
     n_chans = float(self.n_chans)
     bandwidth = float(self.bandwidth)
     ch_bandwidth = bandwidth / n_chans

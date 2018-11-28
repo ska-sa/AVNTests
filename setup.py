@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # https://stackoverflow.com/a/44077346
-import atexit
+# import atexit
 import os
 
 from contextlib import contextmanager
@@ -30,7 +30,7 @@ filterwarnings('ignore')
 
 # Latest tagged stable version
 try:
-  __version__ = check_output(["git", "describe", "--tags"]).rstrip().split('-')[-1]
+  __version__ = check_output(["git", "describe", "--tags"], shell=True).rstrip().split('-')[-1]
 except CalledProcessError:
   __version__ = '0.1'
 

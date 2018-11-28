@@ -11,28 +11,27 @@
 # WRITTEN PERMISSION OF SKA SA.                                               #
 ###############################################################################
 
-from __future__ import division
-from __future__ import print_function
+from __future__ import division, print_function
 
 import logging
 import os
 import random
 import time
 import unittest
+
 import numpy as np
-
-from avn_tests import signalGen
-from avn_tests.aqf_utils import aqf_plot_and_save, aqf_plot_channels, aqf_plot_histogram, aqf_plot_phase_results
-from avn_tests.aqf_utils import aqf_plot_xy, cls_end_aqf, test_heading
-
-from avn_tests.utils import calc_freq_samples, channel_center_freqs, Credentials, complexise, executed_by
-from avn_tests.utils import loggerise, normalised_magnitude, wipd
-
-from avn_tests.avn_rx import AVN_Rx
-
+from ast import literal_eval as evaluate
 from nosekatreport import Aqf, aqf_requirements, aqf_vr, satisfies_vr, system
 
-from descriptions import TestProcedure
+from avn_tests import signalGen
+from avn_tests.aqf_utils import (aqf_plot_and_save, aqf_plot_channels,
+                                 aqf_plot_histogram, aqf_plot_phase_results,
+                                 aqf_plot_xy, cls_end_aqf, test_heading)
+from avn_tests.avn_rx import AVN_Rx
+from avn_tests.utils import (Credentials, calc_freq_samples,
+                             channel_center_freqs, complexise, executed_by,
+                             loggerise, normalised_magnitude, wipd)
+# from descriptions import TestProcedure
 
 LOGGER = logging.getLogger(__file__)
 
@@ -73,7 +72,8 @@ class test_AVN(unittest.TestCase):
             Aqf.step('Set and confirm accumulation period via CAM interface.')
             reply, _ = self.avnControl.katcp_request(
                 katcprequest='setRoachAccumulationLength', katcprequestArg=acc_len)
-            assert reply.reply_ok()
+            if not reply.reply_ok():
+                raise AssertionError()
             actual_acc_len = int(self.avnControl.sensor_request('roachAccumulationLength')[-1])
             Aqf.equals(acc_len, actual_acc_len,
                        'Accumulation time set to {:.3f} seconds'.format(acc_time))
@@ -95,7 +95,8 @@ class test_AVN(unittest.TestCase):
     def test_channelisation(self):
         #        Aqf.procedure(TestProcedure.Channelisation)
         try:
-            assert eval(os.getenv('DRY_RUN', 'False'))
+            if not evaluate(os.getenv('DRY_RUN', 'False')):
+                raise AssertionError()
         except AssertionError:
             instrument_success = self.set_instrument()
             if instrument_success:
@@ -115,7 +116,7 @@ class test_AVN(unittest.TestCase):
     #     # in the range $$500 +0 -20ms$$.
     #     Aqf.procedure(TestProcedure.VectorAcc)
     #     try:
-    #         assert eval(os.getenv('DRY_RUN', 'False'))
+    #         assert evaluate(os.getenv('DRY_RUN', 'False'))
     #     except AssertionError:
     #         instrument_success = self.set_instrument()
     #         if instrument_success:
@@ -141,7 +142,7 @@ class test_AVN(unittest.TestCase):
             self, test_chan, samples_per_chan=101, chans_around=2)
         expected_fc = channel_center_freqs(self)[test_chan]
         # Get baseline 0 data, i.e. auto-corr of m000h
-        test_baseline = 0
+        # test_baseline = 0
         # [CBF-REQ-0053]
         min_bandwithd_req = 350e6
         # [CBF-REQ-0126] CBF channel isolation
@@ -151,7 +152,7 @@ class test_AVN(unittest.TestCase):
         # Channel magnitude responses for each frequency
         chan_responses = []
         last_source_freq = None
-        print_counts = 3
+        # print_counts = 3
 
         cw_power = -8.0
         Aqf.step(
@@ -159,14 +160,17 @@ class test_AVN(unittest.TestCase):
                 cw_power))
         try:
             _set_freq = self.signalGen.setFrequency(expected_fc)
-            assert _set_freq == expected_fc
+            if not _set_freq == expected_fc:
+                raise AssertionError()
             _set_pw = self.signalGen.setPower(cw_power)
-            assert _set_pw == cw_power
+            if not _set_pw == cw_power:
+                raise AssertionError()
             Aqf.passed("Signal Generator set successfully.")
             self.avnControl.startCapture()
             time.sleep(1)
-        except Exception as exc:
-            LOGGER.error("Failed to set Signal Generator parameters")
+        except Exception:
+            LOGGER.error("Failed to set Signal Generator parameters",
+                exc_info=True)
             return False
 
         try:
@@ -418,9 +422,12 @@ class test_AVN(unittest.TestCase):
                 response = chan_responses[ind, test_chan]
                 return ind, source_freq, response
 
-            fc_ind, fc_src_freq, fc_resp = get_close_result(expected_fc)
-            co_low_ind, co_low_src_freq, co_low_resp = get_close_result(co_low_freq)
-            co_high_ind, co_high_src_freq, co_high_resp = get_close_result(co_high_freq)
+            # fc_ind, fc_src_freq, fc_resp = get_close_result(expected_fc)
+            _, fc_src_freq, fc_resp = get_close_result(expected_fc)
+            # co_low_ind, co_low_src_freq, co_low_resp = get_close_result(co_low_freq)
+            _, co_low_src_freq, co_low_resp = get_close_result(co_low_freq)
+            # co_high_ind, co_high_src_freq, co_high_resp = get_close_result(co_high_freq)
+            _, co_high_src_freq, co_high_resp = get_close_result(co_high_freq)
             # [CBF-REQ-0047] CBF channelisation frequency resolution requirement
             Aqf.step('Confirm that the response at channel-edges are -3 dB '
                      'relative to the channel centre at {:.3f} Hz, actual source freq '
@@ -438,7 +445,7 @@ class test_AVN(unittest.TestCase):
             low_rel_resp_accept = np.abs(desired_cutoff_resp + acceptable_co_var)
             hi_rel_resp_accept = np.abs(desired_cutoff_resp - acceptable_co_var)
 
-            cutoff_edge = np.abs((co_lo_band_edge_rel_resp + co_hi_band_edge_rel_resp) / 2)
+            # cutoff_edge = np.abs((co_lo_band_edge_rel_resp + co_hi_band_edge_rel_resp) / 2)
 
             no_of_responses = 3
             center_bin = [150, 250, 350]
@@ -547,14 +554,13 @@ class test_AVN(unittest.TestCase):
     #     test_freq_channel = abs(
     #         np.argmin(np.abs(self.cam_sensors.ch_center_freqs[:chan_index] - test_freq)) -
     #         test_chan)
-    #     Aqf.step('Selected test input {} and test frequency channel {}'.format(
-    #         test_input, test_freq_channel))
     #     eqs = np.zeros(n_chans, dtype=np.complex)
     #     eqs[test_freq_channel] = eq_scaling
     #     get_and_restore_initial_eqs(self)
     #     try:
     #         reply, _informs = self.avnControl.katcp_rct.req.gain(test_input, *list(eqs))
-    #         assert reply.reply_ok()
+    # if not reply.reply_ok():
+    #     raise AssertionError()
     #         Aqf.hop('Gain successfully set on input %s via CAM interface.' % test_input)
     #     except Exception:
     #         errmsg = 'Gains/Eq could not be set on input %s via CAM interface' % test_input
@@ -585,7 +591,8 @@ class test_AVN(unittest.TestCase):
     #         LOGGER.exception(errmsg)
     #     try:
     #         reply, informs = self.avnControl.katcp_rct.req.quantiser_snapshot(test_input)
-    #         assert reply.reply_ok()
+    # if not reply.reply_ok():
+    #     raise AssertionError()
     #         informs = informs[0]
     #     except Exception:
     #         errmsg = ('Failed to retrieve quantiser snapshot of input %s via '
@@ -594,7 +601,7 @@ class test_AVN(unittest.TestCase):
     #         LOGGER.exception(errmsg)
     #         return
     #     else:
-    #         quantiser_spectrum = np.array(eval(informs.arguments[-1]))
+    #         quantiser_spectrum = np.array(evaluate(informs.arguments[-1]))
     #         if chan_index:
     #             quantiser_spectrum = quantiser_spectrum[:chan_index]
     #         # Check that the spectrum is not zero in the test channel
@@ -672,7 +679,8 @@ class test_AVN(unittest.TestCase):
     def test_linearity(self):
         #Aqf.procedure(TestProcedure.LBandEfficiency)
         try:
-            assert eval(os.getenv('DRY_RUN', 'False'))
+            if not evaluate(os.getenv('DRY_RUN', 'False')):
+                raise AssertionError()
         except AssertionError:
             instrument_success = self.set_instrument()
             if instrument_success:
@@ -695,7 +703,8 @@ class test_AVN(unittest.TestCase):
         try:
             Aqf.step('Setting signal generator frequency to: {:.6f} MHz'.format(freq / 1000000.))
             _set_freq = self.signalGen.setFrequency(freq)
-            assert _set_freq == freq
+            if not _set_freq == freq:
+                raise AssertionError()
             #Aqf.passed("Signal Generator set successfully.")
         except Exception as exc:
             LOGGER.error("Failed to set Signal Generator parameters")
@@ -715,10 +724,12 @@ class test_AVN(unittest.TestCase):
                 if local_freq != freq:
                     Aqf.step('Setting signal generator frequency to: {:.6f} MHz'.format(freq / 1000000.))
                     _set_freq = self.signalGen.setFrequency(local_freq)
-                    assert _set_freq == local_freq
+                    if not _set_freq == local_freq:
+                        raise AssertionError()
                 Aqf.step('Setting signal generator level to: {} dBm'.format(cw_scale))
                 _set_pw = self.signalGen.setPower(cw_scale)
-                assert _set_pw == cw_scale
+                if not _set_pw == cw_scale:
+                    raise AssertionError()
                 #Aqf.passed("Signal Generator set successfully.")
                 self.avnControl.startCapture()
                 time.sleep(3)
@@ -813,7 +824,8 @@ class test_AVN(unittest.TestCase):
     def test_digital_gain(self):
         #Aqf.procedure(TestProcedure.LBandEfficiency)
         try:
-            assert eval(os.getenv('DRY_RUN', 'False'))
+            if not evaluate(os.getenv('DRY_RUN', 'False')):
+                raise AssertionError()
         except AssertionError:
             instrument_success = self.set_instrument()
             if instrument_success:
@@ -836,7 +848,8 @@ class test_AVN(unittest.TestCase):
         try:
             Aqf.step('Setting signal generator frequency to: {:.6f} MHz'.format(freq / 1000000.))
             _set_freq = self.signalGen.setFrequency(freq)
-            assert _set_freq == freq
+            if not _set_freq == freq:
+                raise AssertionError()
             #Aqf.passed("Signal Generator set successfully.")
         except Exception as exc:
             LOGGER.error("Failed to set Signal Generator parameters")
@@ -852,10 +865,12 @@ class test_AVN(unittest.TestCase):
                 if local_freq != freq:
                     Aqf.step('Setting signal generator frequency to: {:.6f} MHz'.format(freq / 1000000.))
                     _set_freq = self.signalGen.setFrequency(local_freq)
-                    assert _set_freq == local_freq
+                    if not _set_freq == local_freq:
+                        raise AssertionError()
                 Aqf.step('Setting signal generator level to: {} dBm'.format(cw_scale))
                 _set_pw = self.signalGen.setPower(cw_scale)
-                assert _set_pw == cw_scale
+                if not _set_pw == cw_scale:
+                    raise AssertionError()
                 #Aqf.passed("Signal Generator set successfully.")
                 self.avnControl.startCapture()
                 time.sleep(1)
@@ -954,7 +969,8 @@ class test_AVN(unittest.TestCase):
     def test_accumulation_length(self):
         #Aqf.procedure(TestProcedure.LBandEfficiency)
         try:
-            assert eval(os.getenv('DRY_RUN', 'False'))
+            if not evaluate(os.getenv('DRY_RUN', 'False')):
+                raise AssertionError()
         except AssertionError:
             instrument_success = self.set_instrument()
             if instrument_success:
@@ -978,25 +994,28 @@ class test_AVN(unittest.TestCase):
         try:
             Aqf.step('Setting signal generator frequency to: {:.6f} MHz'.format(freq / 1000000.))
             _set_freq = self.signalGen.setFrequency(freq)
-            assert _set_freq == freq
+            if not _set_freq == freq:
+                raise AssertionError()
             Aqf.step('Setting signal generator level to: {} dBm'.format(cw_scale))
             _set_pw = self.signalGen.setPower(cw_scale)
-            assert _set_pw == cw_scale
+            if not _set_pw == cw_scale:
+                raise AssertionError()
             #Aqf.passed("Signal Generator set successfully.")
-        except Exception as exc:
-            LOGGER.error("Failed to set Signal Generator parameters")
+        except Exception:
+            LOGGER.error("Failed to set Signal Generator parameters", exc_info=True)
             return False
 
         def get_cw_val(acc_len,test_channel):
             """Get the CW power value from the given channel."""
-            local_freq = ch_list[self.n_chans-test_channel] + f_offset
+            # local_freq = ch_list[self.n_chans-test_channel] + f_offset
 
             try:
 
                 Aqf.step("Setting accumulation length to: {}".format(acc_len))
                 reply, _ = self.avnControl.katcp_request(
                     katcprequest='setRoachAccumulationLength', katcprequestArg=int(acc_len*390625)) # Because it counts in spectra.
-                assert reply.reply_ok()
+                if not reply.reply_ok():
+                    raise AssertionError()
                 actual_acc_len = int(self.avnControl.sensor_request('roachAccumulationLength')[-1])
                 Aqf.equals(int(acc_len*390625), actual_acc_len,
                            "Accumulation length set to {} frames".format(actual_acc_len))
@@ -1094,8 +1113,3 @@ class test_AVN(unittest.TestCase):
                      xlabel='Accumulation length [s]',
                      ylabel='Integrated Output Power [raw]')
         Aqf.end(passed=True, message='TBD')
-
-
-
-
-
