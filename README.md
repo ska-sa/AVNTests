@@ -42,7 +42,7 @@ touch .env
 echo "USERNAME=<Username on Host - usually: avn>" >> "$(pwd)/.env"
 echo "PASSWORD=<Password>" >> "$(pwd)/.env"
 echo "HOSTIP=<Signal Generator IP>" >> "$(pwd)/.env"
-echo "KATCPIP=<katcp host IP>" >> "$(pwd)/.en"v
+echo "KATCPIP=<katcp host IP>" >> "$(pwd)/.env"
 ```
 
 ## Unit Testing
