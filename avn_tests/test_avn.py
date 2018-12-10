@@ -30,7 +30,6 @@ from avn_tests.aqf_utils import (aqf_plot_and_save, aqf_plot_channels,
 from avn_tests.avn_rx import AVN_Rx
 from avn_tests.utils import (Credentials, calc_freq_samples,
                              channel_center_freqs, executed_by,
-
                              loggerise, normalised_magnitude, wipd)
 # from descriptions import TestProcedure
 
