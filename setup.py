@@ -44,7 +44,7 @@ try:
         pass
 except Exception:
     __install_requires__ = [
-        'matplotlib', 'numpy', 'h5py', 'Nose', 'ansicolor', 'traceback2']
+        'matplotlib', 'numpy', 'h5py', 'Nose', 'ansicolor', 'traceback2', 'katcp>=0.6.2']
 
 @contextmanager
 def cwd(path):
