@@ -28,9 +28,7 @@ from avn_tests.aqf_utils import (aqf_plot_and_save, aqf_plot_channels,
                                  aqf_plot_phase_results, aqf_plot_xy,
                                  cls_end_aqf, test_heading)
 from avn_tests.avn_rx import AVN_Rx
-from avn_tests.utils import (Credentials, calc_freq_samples,
-                             channel_center_freqs, executed_by,
-                             loggerise, normalised_magnitude, wipd)
+from avn_tests.utils import *
 # from descriptions import TestProcedure
 
 LOGGER = logging.getLogger(__file__)
@@ -38,7 +36,7 @@ LOGGER = logging.getLogger(__file__)
 
 @cls_end_aqf
 @system('avn')
-class test_AVN(unittest.TestCase):
+class test_AVN(unittest.TestCase, UtilsClass):
     """ Unit-testing class for AVN tests"""
 
     def setUp(self):
@@ -138,9 +136,8 @@ class test_AVN(unittest.TestCase):
     # def _test_channelisation(self, test_chan=212):
     def _test_channelisation(self, test_chan=212):
         req_chan_spacing = self.bandwidth / self.n_chans
-        requested_test_freqs = calc_freq_samples(
-            self, test_chan, samples_per_chan=101, chans_around=2)
-        expected_fc = channel_center_freqs(self)[test_chan]
+        requested_test_freqs = self.calc_freq_samples(test_chan, samples_per_chan=101, chans_around=2)
+        expected_fc = self.channel_center_freqs()[test_chan]
         # Get baseline 0 data, i.e. auto-corr of m000h
         # test_baseline = 0
         # [CBF-REQ-0053]
@@ -454,7 +451,7 @@ class test_AVN(unittest.TestCase):
             legends = [
                 'Channel {} / Sample {} \n@ {:.3f} MHz'.format(
                     ((test_chan + i) - 1), v,
-                    channel_center_freqs(self)[test_chan + i] / 1e6)
+                    self.channel_center_freqs()[test_chan + i] / 1e6)
                 for i, v in zip(range(no_of_responses), center_bin)
             ]
             #center_bin.append('Channel spacing: {:.3f}kHz'.format(856e6 / self.n_chans_selected / 1e3))
