@@ -258,11 +258,18 @@ def channel_center_freqs(self):
     ---------
     List: channel center frequencies
     """
+
     n_chans = float(self.n_chans)
     bandwidth = float(self.bandwidth)
     ch_bandwidth = bandwidth / n_chans
-    f_start = (2 * bandwidth) - ch_bandwidth  # Center freq of the first channel
-    return f_start - np.arange(n_chans) * ch_bandwidth
+
+    if self.mode == "wideband":
+        f_start = (2 * bandwidth) - ch_bandwidth  # Center freq of the first channel
+    else:
+        f_start = 800e6 - self.bandwidth*(self.coarse_channel)
+
+    return f_start - np.arange(n_chans) * ch_bandwidth - ch_bandwidth/2
+
 
 
 def calc_freq_samples(self, chan, samples_per_chan, chans_around=0):

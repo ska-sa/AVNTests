@@ -183,7 +183,7 @@ class SCPI(LoggingClass):
 if __name__ == '__main__':
 
     # SMB100A R&S Signal Generator IP address
-    siggen_ip = '10.8.5.72'
+    siggen_ip = '10.0.2.137'
     siggen_port = 5025
 
 # ## Opening socket to signal generator for CW input signal

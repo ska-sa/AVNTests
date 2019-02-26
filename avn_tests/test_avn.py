@@ -57,19 +57,22 @@ class test_AVN(unittest.TestCase):
 
         try:
             self.errmsg = None
-            # 2nd Nyquist Zone
-            self.bandwidth = float(self.avnControl.sensor_request('roachFrequencyFs')[-1]) / 2
             self.n_chans = int(self.avnControl.sensor_request("roachNumFrequencyChannels")[-1])
-            #Fs = 800e6 # Hz
-            # Wideband
-            # Nfft = 2048
+            self.bandwidth = float(self.avnControl.sensor_request('roachFrequencyFs')[-1]) / 2
             self.Nfft = float(self.avnControl.sensor_request('roachSizeOfCoarseFFT')[-1])
-            # self.Nfft = float(self.avnControl.sensor_request('roachSizeOfCoarseFFT')[-1]) * (
-            #     self.avnControl.sensor_request('roachSizeOfFineFFT')[-1])
-            # Narrow band
-            # Nfft = 512 * 4096
-            # TODO This is going to need to be revised to detect the narrowband case properly.
-            acc_len = int(2*self.bandwidth / self.Nfft * acc_time)
+
+            # This determines whether we're looking at the wideband or narrowband case.
+            self.coarse_channel = None
+            self.N_finefft = int(self.avnControl.sensor_request('roachSizeOfFineFFT')[-1])
+            if self.N_finefft == 0:
+                self.mode = "wideband"
+                acc_len = 2*self.bandwidth/self.Nfft*acc_time
+            else:
+                self.mode = "narrowband"
+                self.bandwidth /= (self.Nfft/2)
+                self.coarse_channel = int(self.avnControl.sensor_request("roachCoarseChannelSelect")[-1])
+                acc_len = int(self.bandwidth / self.N_finefft * acc_time)
+
             Aqf.step('Set and confirm accumulation period via CAM interface.')
             reply, _ = self.avnControl.katcp_request(
                 katcprequest='setRoachAccumulationLength', katcprequestArg=acc_len)
@@ -135,15 +138,19 @@ class test_AVN(unittest.TestCase):
     #             Aqf.failed(self.errmsg)
 
     # def _test_channelisation(self, test_chan=212):
-    def _test_channelisation(self, test_chan=212):
+    def _test_channelisation(self, test_chan=2212):
+
+        frequency_tweak = -1220
+
         req_chan_spacing = self.bandwidth / self.n_chans
         requested_test_freqs = calc_freq_samples(
             self, test_chan, samples_per_chan=101, chans_around=2)
         expected_fc = channel_center_freqs(self)[test_chan]
+        #Aqf.note("Test channel given: {}, at frequency {}".format(test_chan, expected_fc))
         # Get baseline 0 data, i.e. auto-corr of m000h
         test_baseline = 0
         # [CBF-REQ-0053]
-        min_bandwithd_req = 350e6
+        min_bandwithd_req = 1.5e6
         # [CBF-REQ-0126] CBF channel isolation
         cutoff = 53  # dB
         # Placeholder of actual frequencies that the signal generator produces
@@ -153,13 +160,13 @@ class test_AVN(unittest.TestCase):
         last_source_freq = None
         print_counts = 3
 
-        cw_power = -8.0
+        cw_power = -49.0
         Aqf.step(
             'Configured signal generator to generate a continuous wave (cwg0), with {} dBm '.format(
                 cw_power))
         try:
-            _set_freq = self.signalGen.setFrequency(expected_fc)
-            assert _set_freq == expected_fc
+            _set_freq = self.signalGen.setFrequency(expected_fc + frequency_tweak)
+            #assert _set_freq == expected_fc
             _set_pw = self.signalGen.setPower(cw_power)
             assert _set_pw == cw_power
             Aqf.passed("Signal Generator set successfully.")
@@ -230,7 +237,7 @@ class test_AVN(unittest.TestCase):
 
         for i, freq in enumerate(requested_test_freqs):
             self.avnControl.startCapture()
-            this_source_freq = self.signalGen.setFrequency(freq)
+            this_source_freq = self.signalGen.setFrequency(freq + frequency_tweak)
             _msg = ('Getting channel response for freq {} @ {}: {:.3f} MHz.'.format(
                 i + 1, len(requested_test_freqs), freq / 1e6))
             Aqf.progress(_msg)
@@ -322,7 +329,7 @@ class test_AVN(unittest.TestCase):
 
             # Plot channel response with -53dB cutoff horizontal line
             aqf_plot_and_save(
-                freqs=actual_test_freqs[1:-1],
+                freqs=actual_test_freqs[1:-1] - frequency_tweak,
                 data=plot_data[1:-1],
                 df=df,
                 expected_fc=expected_fc,
@@ -367,7 +374,7 @@ class test_AVN(unittest.TestCase):
                 test_chan, expected_fc / 1e6)
 
             aqf_plot_and_save(
-                central_chan_test_freqs,
+                central_chan_test_freqs - frequency_tweak,
                 plot_data_central,
                 df,
                 expected_fc,
@@ -819,9 +826,9 @@ class test_AVN(unittest.TestCase):
             if instrument_success:
                 self._test_digital_gain(test_channel=100,
                                 cw_scale = -15.0,
-                                gain_start = 64.0,
+                                gain_start = 75,
                                 fft_shift = 2047,
-                                max_steps = 100)
+                                max_steps = 120)
             else:
                 Aqf.failed(self.errmsg)
 
@@ -889,7 +896,7 @@ class test_AVN(unittest.TestCase):
             prev_val = curr_val
             curr_val = get_cw_val(cw_scale,gain,fft_shift,test_channel)
             Aqf.hop('curr_val = {}'.format(curr_val))
-            gain /= gain_delta
+            gain -= gain_delta
             max_cnt -= 1
         gain_start = gain + 4*gain_delta
         Aqf.hop('Starting gain set to {}'.format(gain_start))
@@ -936,7 +943,7 @@ class test_AVN(unittest.TestCase):
                    ''.format(gain_start, gain, cw_scale, fft_shift,
                                             gain))
         exp_idx = int(len(x_val_array)/3)
-        m = 1
+        m = np.average(np.diff(output_power[exp_idx:])/np.diff(x_val_array[exp_idx:]))
         #c = exp_y_val - m*exp_x_val
         c = output_power[exp_idx] - m*x_val_array[exp_idx]
         y_exp = []
