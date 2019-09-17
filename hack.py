@@ -1,3 +1,4 @@
+# STATUS: Complete for WB case.
 from __future__ import print_function
 import numpy as np
 import matplotlib.pyplot as plt
@@ -15,10 +16,10 @@ bandwidth = 512e6
 
 
 # Which tests to run
-channelisation_test = True
-linearity_test = True
-attenuator_test = True
-gain_test = True
+channelisation_test = False
+linearity_test = False
+attenuator_test = False
+gain_test = False
 accumulation_test = True
 
 # Derived values
@@ -37,7 +38,7 @@ def channel_with_max_power(spectrum):
 
 
 def dump_to_spectrum(dump):
-    spectrum = 10*np.log10(np.average(dump[:,:,0], axis=0))
+    spectrum = 10*np.log10(dump[-2,:,0])
     return spectrum
 
 def normalised_spectrum(spectrum):
@@ -86,10 +87,10 @@ if __name__ == "__main__":
         receiver.katcp_request(katcprequest="setRoachADC1Attenuation", katcprequestArg="{:d}".format(test_attenuation))
 
         print("Setting DSP gain to {} for {} test.".format(test_gain, test_name))
-        receiver.katcp_request(katcprequest="setRoachDspGain", katcprequestArg="{:d}".format(test_gain))
+        receiver.katcp_request(katcprequest="setRoachDspGain", katcprequestArg="{:f}".format(test_gain))
 
         print("Setting accumulation time to {} s for {} test.".format(test_accumulation, test_name))
-        receiver.katcp_request(katcprequest="setRoachAccumulationLength", katcprequestArg="{:d}".format(test_accumulation*500000))
+        receiver.katcp_request(katcprequest="setRoachAccumulationLength", katcprequestArg="{:d}".format(int(test_accumulation*500000)))
 
         print("Setting signal generator output power to {} dBm for {} test.".format(cw_power, test_name))
         signal_gen.setPower(cw_power)
@@ -123,6 +124,7 @@ if __name__ == "__main__":
         plt.legend()
         plt.xlabel("Frequency [MHz]")
         plt.ylabel("Channel response [dB]")
+        plt.title("Clamshell response of channel {} with {} adjacent channels.".format(test_channel, surrounding_channels))
         plt.savefig("clamshell_response.png")
         plt.close()
 
@@ -167,10 +169,10 @@ if __name__ == "__main__":
         receiver.katcp_request(katcprequest="setRoachADC1Attenuation", katcprequestArg="{:d}".format(test_attenuation))
 
         print("Setting DSP gain to {} for this test.".format(test_gain))
-        receiver.katcp_request(katcprequest="setRoachDspGain", katcprequestArg="{:d}".format(test_gain))
+        receiver.katcp_request(katcprequest="setRoachDspGain", katcprequestArg="{:f}".format(test_gain))
 
         print("Setting accumulation time to {} s for {} test.".format(test_accumulation, test_name))
-        receiver.katcp_request(katcprequest="setRoachAccumulationLength", katcprequestArg="{:d}".format(test_accumulation*500000))
+        receiver.katcp_request(katcprequest="setRoachAccumulationLength", katcprequestArg="{:d}".format(int(test_accumulation*500000)))
 
         output_powers = []
 
@@ -206,10 +208,10 @@ if __name__ == "__main__":
         print("Setting signal gen power output to {} dBm for the test.".format(signal_gen.setPower(test_power)))
 
         print("Setting DSP gain to {} for this test.".format(test_gain))
-        receiver.katcp_request(katcprequest="setRoachDspGain", katcprequestArg="{:d}".format(test_gain))
+        receiver.katcp_request(katcprequest="setRoachDspGain", katcprequestArg="{:f}".format(test_gain))
 
         print("Setting accumulation time to {} s for {} test.".format(test_accumulation, test_name))
-        receiver.katcp_request(katcprequest="setRoachAccumulationLength", katcprequestArg="{:d}".format(test_accumulation*500000))
+        receiver.katcp_request(katcprequest="setRoachAccumulationLength", katcprequestArg="{:d}".format(int(test_accumulation*500000)))
 
         output_powers = []
 
@@ -242,18 +244,18 @@ if __name__ == "__main__":
         start_time = datetime.datetime.now()
         test_channel = 500
         test_attenuation = 63
-        gain_range = np.arange(0.15625, 4.0, 0.15625)
+        gain_range = np.arange(0.0078125, 1.6, 0.0078125)
 
         test_frequency = channel_center_freqs[test_channel] - ch_bandwidth / 10.0 # Just so that I'm not in the centre of the bin
         print("Setting signal gen to {} MHz for {} test.".format(signal_gen.setFrequency(test_frequency)/1e6, test_name))
-        print("Setting signal gen to {} dBm for {} test.".format(signal_gen.setPower(test_power, test_name)))
+        print("Setting signal gen to {} dBm for {} test.".format(signal_gen.setPower(test_power), test_name))
 
-        print("Setting attenuation to {} dB for {} test.".format(test_attenuation / 2.0), test_name)
+        print("Setting attenuation to {} dB for {} test.".format(test_attenuation / 2.0, test_name))
         receiver.katcp_request(katcprequest="setRoachADC0Attenuation", katcprequestArg="{:d}".format(test_attenuation))
         receiver.katcp_request(katcprequest="setRoachADC1Attenuation", katcprequestArg="{:d}".format(test_attenuation))
 
         print("Setting accumulation time to {} s for {} test.".format(test_accumulation, test_name))
-        receiver.katcp_request(katcprequest="setRoachAccumulationLength", katcprequestArg="{:d}".format(test_accumulation*500000))
+        receiver.katcp_request(katcprequest="setRoachAccumulationLength", katcprequestArg="{:d}".format(int(test_accumulation*500000)))
 
         output_powers = []
 
@@ -269,7 +271,7 @@ if __name__ == "__main__":
         output_powers = np.array(output_powers)
 
         plt.figure(figsize=(12,10))
-        plt.plot(gain_range, output_powers)
+        plt.semilogx(gain_range, output_powers)
         plt.xlabel("Gain setting")
         plt.ylabel("Output power [dBa]")
         plt.title("Digital gain tested at {} MHz.".format(test_frequency/1e6))
@@ -284,9 +286,10 @@ if __name__ == "__main__":
         print("Testing Accumulation.")
         start_time = datetime.datetime.now()
 
-        local_attenuation = 2
+        local_attenuation = 10
 
         #Signal gen not used for this test.
+        signal_gen.reset()
         #test_frequency = channel_center_freqs[test_channel] - ch_bandwidth / 10.0 # Just so that I'm not in the centre of the bin
         #print("Setting signal gen to {} MHz for {} test.".format(signal_gen.setFrequency(test_frequency)/1e6, test_name))
         #print("Setting signal gen to {} dBm for {} test.".format(signal_gen.setPower(test_power), test_name))
@@ -299,13 +302,14 @@ if __name__ == "__main__":
         receiver.katcp_request(katcprequest="setRoachDspGain", katcprequestArg="{:f}".format(test_gain))
 
         output_powers = []
-        accum_range = np.arange(0.08, 5.0, 0.08)
+        accum_range = np.arange(0.04, 5.0, 0.04)
 
         for i, accum in enumerate(accum_range):
             print("Setting accumulation length to {}. ({} of {})".format(accum, i + 1, len(accum_range)))
             receiver.katcp_request(katcprequest="setRoachAccumulationLength", katcprequestArg="{:d}".format(int(accum*500000)))
-            receiver.startCapture()
             time.sleep(1)
+            receiver.startCapture()
+            time.sleep(accum + 1)
             dump = receiver.get_hdf5(stopCapture=True)
             spectrum = dump_to_spectrum(dump)
             output_powers.append(spectrum[test_channel])
@@ -316,7 +320,7 @@ if __name__ == "__main__":
         plt.plot(accum_range, output_powers)
         plt.xlabel("Accumulation length setting [seconds]")
         plt.ylabel("Output power [dBa]")
-        plt.title("Digital gain tested at channel {}.".format(test_channel))
+        plt.title("Accumulation length tested at channel {}.".format(test_channel))
         plt.grid()
         plt.savefig("accumulation.png")
 
