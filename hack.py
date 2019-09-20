@@ -2,6 +2,7 @@
 from __future__ import print_function
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import time
 import datetime
 
@@ -17,10 +18,10 @@ bandwidth = 512e6
 
 # Which tests to run
 channelisation_test = False
-linearity_test = False
+linearity_test = True
 attenuator_test = False
 gain_test = False
-accumulation_test = True
+accumulation_test = False
 
 # Derived values
 ch_bandwidth = bandwidth / n_chans
@@ -159,7 +160,8 @@ if __name__ == "__main__":
         print("Testing linearity with signal generator.")
         start_time = datetime.datetime.now()
 
-        input_power_range = np.arange(-80.0, -5.0, 0.25)
+        power_step = 1.0
+        input_power_range = np.arange(-80.0, -5.0, power_step)
 
         test_frequency = channel_center_freqs[test_channel] - ch_bandwidth / 10.0 # Just so that I'm not in the centre of the bin
         print("Setting signal gen freq output to {} MHz for {} test.".format(signal_gen.setFrequency(test_frequency)/1e6, test_name))
@@ -186,13 +188,43 @@ if __name__ == "__main__":
 
         output_powers = np.array(output_powers)
 
+        # Plot transfer function
+        # We assume the ideal gradient to be 1. The most linear region is (empirically) roughly 3/4 along the test sequence.
+        # Calculate Y-intercept:
+        test_point = len(output_powers)*3/4
+        c = output_powers[test_point] - input_power_range[test_point]
+        ideal_response = input_power_range + c
+
         plt.figure(figsize=(12,10))
         plt.plot(input_power_range, output_powers)
+        plt.plot(input_power_range, ideal_response, "orange", dashes=[2,2])
         plt.xlabel("Input power [dBm]")
         plt.ylabel("Output power [dBa]")
         plt.title("Linearity tested with signal generator at {} MHz.".format(test_frequency/1e6))
         plt.grid()
         plt.savefig("linearity.png")
+
+
+        #Calculate and plot differential non-linearity
+        differential_nonlinearity = np.diff(output_powers) - power_step
+        plt.figure(figsize=(12,10))
+        plt.plot(input_power_range[1:], differential_nonlinearity)
+        plt.xlabel("Input power [dBm]")
+        plt.ylabel("Differential nonlinearity [dBa]")
+        plt.title("Linearity tested with signal generator at {} MHz.".format(test_frequency/1e6))
+        plt.grid()
+        plt.savefig("differential_nonlinearity.png")
+
+
+        #calculate and plot integral non-linearity
+        integral_nonlinearity = output_powers - ideal_response;
+        plt.figure(figsize=(12,10))
+        plt.plot(input_power_range, integral_nonlinearity)
+        plt.xlabel("Input power [dBm]")
+        plt.ylabel("Integral nonlinearity [dBa]")
+        plt.title("Linearity tested with signal generator at {} MHz.".format(test_frequency/1e6))
+        plt.grid()
+        plt.savefig("integral_nonlinearity.png")
 
         end_time = datetime.datetime.now()
         print("Linearity test took {}.".format(end_time - start_time))
@@ -203,12 +235,14 @@ if __name__ == "__main__":
         start_time = datetime.datetime.now()
         attenuator_range = np.arange(0, 63, 1)
 
+        local_test_power = test_power - 5 # to test the full range of the attenuation.
         test_frequency = channel_center_freqs[test_channel] - ch_bandwidth / 10.0 # Just so that I'm not in the centre of the bin
-        print("Setting signal gen freq output to {} MHz for the test.".format(signal_gen.setFrequency(test_frequency)/1e6))
-        print("Setting signal gen power output to {} dBm for the test.".format(signal_gen.setPower(test_power)))
+        #print("Setting signal gen freq output to {} MHz for the test.".format(signal_gen.setFrequency(test_frequency)/1e6))
+        #print("Setting signal gen power output to {} dBm for the test.".format(signal_gen.setPower(local_test_power)))
 
-        print("Setting DSP gain to {} for this test.".format(test_gain))
-        receiver.katcp_request(katcprequest="setRoachDspGain", katcprequestArg="{:f}".format(test_gain))
+        local_test_gain = test_gain / 2
+        print("Setting DSP gain to {} for this test.".format(local_test_gain))
+        receiver.katcp_request(katcprequest="setRoachDspGain", katcprequestArg="{:f}".format(local_test_gain))
 
         print("Setting accumulation time to {} s for {} test.".format(test_accumulation, test_name))
         receiver.katcp_request(katcprequest="setRoachAccumulationLength", katcprequestArg="{:d}".format(int(test_accumulation*500000)))
@@ -227,11 +261,13 @@ if __name__ == "__main__":
 
         output_powers = np.array(output_powers)
 
-        plt.figure(figsize=(12,10))
+        fig = plt.figure(figsize=(12,10))
+        ax = fig.add_subplot(111)
         plt.plot(attenuator_range / 2.0, output_powers)
         plt.xlabel("Attenuator setting [dB]")
         plt.ylabel("Output power [dBa]")
         plt.title("Variable attenuator tested at {} MHz.".format(test_frequency/1e6))
+        ax.yaxis.set_major_locator(ticker.MultipleLocator(1.0))
         plt.grid()
         plt.savefig("attenuators.png")
 
