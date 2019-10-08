@@ -18,7 +18,8 @@ bandwidth = 512e6
 
 # Which tests to run
 channelisation_test = False
-linearity_test = True
+channelisation_test_narrowband = True
+linearity_test = False
 attenuator_test = False
 gain_test = False
 accumulation_test = False
@@ -33,6 +34,17 @@ def get_channel_center_freqs(n_chans, bandwidth):
     f_start = 2*bandwidth;
     ch_bandwidth = bandwidth / n_chans
     return f_start - np.arange(n_chans) * ch_bandwidth
+
+
+def get_nb_channel_center_freqs(coarse_bw, coarse_chan, n_coarse, n_fine):
+    f_start = 2*coarse_bw;
+    fine_bw = coarse_bw / n_coarse
+    n_channel_bw = fine_bw / n_fine
+    channel_freq_deltas = np.linspace(n_fine/2, -n_fine/2+1, n_fine)*n_channel_bw # This is specifically for the spectrally-inverted case. Won't work for baseband.
+    coarse_centre_freq = get_channel_center_freqs(n_coarse, coarse_bw)[coarse_chan]
+    return coarse_centre_freq + channel_freq_deltas
+
+
 
 def channel_with_max_power(spectrum):
     return np.argmax(spectrum[1:]) + 1
@@ -66,7 +78,7 @@ if __name__ == "__main__":
 
 
     #default parameters when these are not the things being tested
-    test_channel = 500
+    test_channel = 384
     test_attenuation = 63
     test_gain = 0.125
     test_power = -40
@@ -153,6 +165,104 @@ if __name__ == "__main__":
 
         end_time = datetime.datetime.now()
         print("Channelisation test took {}.".format(end_time - start_time))
+
+    if channelisation_test_narrowband:
+        test_name = "Narrowband Channelisation"
+        print("Testing channel response.")
+        start_time = datetime.datetime.now()
+
+        if int(receiver.sensor_request("roachSizeOfFineFFT")[4]) == 0:
+            print("Error - receiver is in wideband mode.")
+        else:
+
+            #Setup specific to this test
+            local_test_accumulation = 300
+            local_test_channel = 143
+            local_test_gain = 0.125
+            local_test_attenuation = 39
+            nb_test_channel = 2714
+            nb_ch_bandwidth = bandwidth / 256 / 4096 #clunky but it'll do for now
+            surrounding_channels = 3
+            points_per_channel = 31
+            cw_power = -38.0  # dBm
+            freq_fudge = 0.998685e6
+
+            print("Setting ADC attenuation to {} dB for {} test.".format(test_attenuation / 2.0, test_name))
+            receiver.katcp_request(katcprequest="setRoachADC0Attenuation", katcprequestArg="{:d}".format(local_test_attenuation))
+            receiver.katcp_request(katcprequest="setRoachADC1Attenuation", katcprequestArg="{:d}".format(local_test_attenuation))
+
+            print("Setting DSP gain to {} for {} test.".format(test_gain, test_name))
+            receiver.katcp_request(katcprequest="setRoachDspGain", katcprequestArg="{:f}".format(local_test_gain))
+
+            print("Setting accumulation time to {} s for {} test.".format(test_accumulation, test_name))
+            receiver.katcp_request(katcprequest="setRoachAccumulationLength", katcprequestArg="{:d}".format(local_test_accumulation))
+
+            print("Setting coarse channel to {} for {} test.".format(local_test_channel, test_name))
+            receiver.katcp_request(katcprequest="setRoachCoarseChannelSelect", katcprequestArg="{:d}".format(int(local_test_channel)))
+
+            print("Setting signal generator output power to {} dBm for {} test.".format(cw_power, test_name))
+            signal_gen.setPower(cw_power)
+
+            #Frequency range
+            nb_channel_center_freqs = get_nb_channel_center_freqs(bandwidth, local_test_channel, 256, 4096)
+            nb_test_frequency = nb_channel_center_freqs[nb_test_channel]
+            channels_to_watch = slice(nb_test_channel - surrounding_channels, nb_test_channel + surrounding_channels + 1)
+            channel_responses = []
+            frequencies = np.linspace(nb_channel_center_freqs[nb_test_channel - surrounding_channels] + nb_ch_bandwidth/2,
+                                      nb_channel_center_freqs[nb_test_channel + surrounding_channels] - nb_ch_bandwidth/2,
+                                      (points_per_channel - 1)*(2*surrounding_channels + 1) + 1)
+
+            for i, freq in enumerate(frequencies):
+                print("Setting signal gen to {} MHz ({} of {})".format(signal_gen.setFrequency(freq + freq_fudge)/1e6, i+1, len(frequencies)))
+
+                receiver.startCapture()
+                time.sleep(3)
+                dump = receiver.get_hdf5(stopCapture=True)
+                spectrum = dump_to_spectrum(dump)
+                channel_responses.append(spectrum[channels_to_watch])
+
+            channel_responses = np.array(channel_responses)
+
+
+            # Clamshell response of all N channels.
+            plt.figure(figsize=(12,10))
+            for i in range(channel_responses.shape[1]):
+                plt.plot(frequencies/1e6, channel_responses[:,i] - np.max(channel_responses), label="Channel {} ".format(nb_test_channel - surrounding_channels + i))
+
+            plt.grid()
+            plt.legend()
+            plt.xlabel("Frequency [MHz]")
+            plt.ylabel("Channel response [dB]")
+            plt.title("Clamshell response of channel {} with {} adjacent channels.".format(nb_test_channel, surrounding_channels))
+            plt.savefig("nb_clamshell_response.png")
+            plt.close()
+
+
+            # Test channel response.
+            norm_channel_response = channel_responses[:,channel_responses.shape[1]/2] \
+                                    - np.max(channel_responses[:,channel_responses.shape[1]/2])
+            plt.figure(figsize=(12,10))
+            plt.plot(frequencies/1e6, norm_channel_response,
+                     label="Channel {}".format(nb_test_channel))
+            plt.xlabel("Frequency [MHz]")
+            plt.ylabel("Channel response [dB]")
+            plt.title("Channel {} response".format(nb_test_channel))
+            plt.grid()
+            plt.plot([(nb_test_frequency - nb_ch_bandwidth/2)/1e6, (nb_test_frequency - nb_ch_bandwidth/2)/1e6], [np.max(norm_channel_response), np.min(norm_channel_response)], dashes=[2, 2], color="black")
+            plt.plot([(nb_test_frequency + nb_ch_bandwidth/2)/1e6, (nb_test_frequency + nb_ch_bandwidth/2)/1e6], [np.max(norm_channel_response), np.min(norm_channel_response)], dashes=[2, 2], color="black")
+            plt.plot(frequencies/1e6, np.ones(len(frequencies))*-3, dashes=[2,2], color="red")
+            plt.plot(frequencies/1e6, np.ones(len(frequencies))*-6, dashes=[6,1], color="red")
+            plt.savefig("nb_test_channel_response.png")
+
+            plt.xlim((nb_test_frequency - 3.0/4*nb_ch_bandwidth)/1e6, (nb_test_frequency + 3.0/4*nb_ch_bandwidth)/1e6)
+            plt.ylim(-10, 2)
+            plt.title("Channel {} response (zoomed)".format(nb_test_channel))
+            plt.savefig("nb_test_channel_zoomed.png")
+
+        end_time = datetime.datetime.now()
+        print("Channelisation (narrowband) test took {}.".format(end_time - start_time))
+
+
 
 
     if linearity_test:
