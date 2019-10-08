@@ -1,28 +1,25 @@
 #!/usr/bin/env python
 
-from __future__ import division
-from __future__ import print_function
+from __future__ import division, print_function
 
 import argparse
-import functools
+# import functools
 import glob
-import h5py
-import katcp
 import logging
-import numpy as np
 import os
-import paramiko
 import sys
 import time
 
-from avn_tests.utils import Credentials
-from avn_tests.utils import retry
+import h5py
+import katcp
+import numpy as np
+import paramiko
 
-# import matplotlib.pyplot as plt
-# import pandas as pd
+from avn_tests.utils import Credentials, retry
 
 class AllowAnythingPolicy(paramiko.MissingHostKeyPolicy):
-    def missing_host_key(self, client, hostname, key):
+    @classmethod
+    def missing_host_key(cls, client, hostname, key):
         return
 
 
@@ -47,10 +44,12 @@ class AVN_Rx(LoggingClass):
 
     def _setUp(self):
         self._dir_remote = "/home/{}/Data/RoachAcquisition/".format(self._username)
-        assert os.path.exists(self._dir_remote)
+        if not os.path.exists(self._dir_remote):
+            raise AssertionError()
         self._dir_local = '/home/{}/avn_data'.format(self._username)
         self._dir_local_dump = '/home/{}/avn_data/dump'.format(self._username)
-        assert self._username, "Username is needed!!!!"
+        if not self._username:
+            raise AssertionError("Username is needed!!!!")
         if not os.path.exists(self._dir_local_dump):
             self.logger.debug('Created {} for storing images.'.format(self._dir_local_dump))
             os.makedirs(self._dir_local_dump)
@@ -90,7 +89,8 @@ class AVN_Rx(LoggingClass):
                 reply, informs = client.blocking_request(katcp.Message.request(katcprequest),
                     timeout=self._timeout)
 
-            assert reply.reply_ok()
+            if not reply.reply_ok():
+                raise AssertionError()
             self.logger.debug("Successfully executed kcpcmd: Reply: {}".format(reply))
         except Exception as exc:
             self.logger.error("Failed to connect to katcp client({}): {}".format(self._katcp_ip, exc))
@@ -102,7 +102,8 @@ class AVN_Rx(LoggingClass):
 
     def sensor_request(self, *args):
         try:
-            assert args > 1
+            if not args > 1:
+                raise AssertionError()
             _, informs = self.katcp_request('sensor-value', args[0])
             return informs[0].arguments
         except Exception as exc:
@@ -143,13 +144,13 @@ class AVN_Rx(LoggingClass):
             sftp.get(latestfile, new_file)
         client.close()
         try:
-            assert os.path.exists(new_file)
+            if not os.path.exists(new_file):
+                raise AssertionError()
         except Exception as exc:
             errmsg = "HDF5 File does not exist: {}".format(exc)
             self.logger.error(errmsg)
             raise RuntimeError(errmsg)
 
-        #import IPython;IPython.embed()
         try:
             self.logger.debug("Extracting data from HDF5 ({})".format(new_file))
             with h5py.File(new_file, 'r') as fin:
@@ -180,7 +181,7 @@ class AVN_Rx(LoggingClass):
             # return data_stokes
             return data_raw
         except Exception:
-            self.logger.error("Issues with the file name")
+            self.logger.error("Issues with the file name", exc_info=True)
             return
 
     def get_hdf5(self, file_format='.h5', stopCapture=False, timeout=10):
@@ -203,7 +204,8 @@ class AVN_Rx(LoggingClass):
             latestfile = None
             latestfile = max(glob.iglob('*'.join([self._dir_remote, file_format])),
                 key=os.path.getctime)
-            assert os.path.exists(latestfile)
+            if not os.path.exists(latestfile):
+                raise AssertionError()
             file_timestamp = latestfile.split('/')[-1].replace('.h5', '').replace("\\@ 0 0", '').replace('_','')
             pattern = "%Y-%m-%dT%H.%M.%S.%f"
             epoch_timestamp = int(time.mktime(time.strptime(file_timestamp, pattern)))
@@ -241,8 +243,9 @@ class AVN_Rx(LoggingClass):
 
     def stopCapture(self):
         try:
-            reply, informs = self.katcp_request(katcprequest='stopRecording')
-            assert reply.reply_ok()
+            reply, _ = self.katcp_request(katcprequest='stopRecording')
+            if not reply.reply_ok():
+                raise AssertionError()
             self.logger.debug("Stop data recording")
             return reply
         except Exception as exc:
@@ -250,10 +253,12 @@ class AVN_Rx(LoggingClass):
 
     def setGain(self, gain=32):
         try:
-            reply, informs = self.katcp_request(katcprequest="setRoachDspGain", katcprequestArg="{}".format(gain))
-            assert reply.reply_ok()
+            reply, _ = self.katcp_request(katcprequest="setRoachDspGain", katcprequestArg="{}".format(gain))
+            if not reply.reply_ok():
+                raise AssertionError()
             actual_gain = float(self.sensor_request("roachDspGain")[-1])
-            assert np.floor(actual_gain) == np.floor(gain), "Gain not set."
+            if not np.floor(actual_gain) == np.floor(gain):
+                raise AssertionError("Gain not set.")
             self.logger.debug(("Set digital gain to {}, actual {}".format(gain, actual_gain)))
             return reply
         except Exception as exc:

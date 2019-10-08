@@ -1,15 +1,12 @@
 import functools
 import logging
-
 from Tkinter import tkinter
+
 import matplotlib.pyplot as plt
 import numpy as np
+from nosekatreport import Aqf
 
 from avn_tests.utils import loggerise
-from nosekatreport import Aqf
-# MEMORY LEAKS DEBUGGING
-# To use, add @DetectMemLeaks decorator to function
-# from memory_profiler import profile as DetectMemLeaks
 
 LOGGER = logging.getLogger(__name__)
 
@@ -161,15 +158,17 @@ def aqf_plot_channels(channelisation, plot_filename='', plot_title='', caption="
             'No display on $DISPLAY environment variable, check matplotlib backend')
         return False
 
+    # This logic could be improved!
     try:
         vlines_plotd = False
         if len(vlines) > 3:
             annotate_text = vlines[-1]
             vlines = vlines[:-1]
-
-        if type(vlines) is list:
+        try:
+            if not isinstance(vlines, list):
+                raise AssertionError()
             _vlines = iter(vlines)
-        else:
+        except Exception:
             _vlines = vlines
     except:
         pass
@@ -272,7 +271,7 @@ def aqf_plot_channels(channelisation, plot_filename='', plot_title='', caption="
             for idx, lines in enumerate(hlines):
                 try:
                     color = plt_line[idx + hline_strt_idx][0].get_color()
-                except:
+                except Exception:
                     color = 'red'
                 plt.axhline(lines, linestyle='dotted',
                             color=color, linewidth=1.5)
